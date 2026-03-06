@@ -1,0 +1,20 @@
+name: Deploy to Oracle Server
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Inject Database Password
+        run: echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" > .env
+
+      - name: Build and Launch
+        run: |
+          docker compose down
+          docker compose up -d --build
