@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgis/postgis:latest
-    platform: linux/arm64
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
@@ -12,7 +11,6 @@ services:
 
   mariadb:
     image: mariadb:latest
-    platform: linux/arm64
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
     volumes:
