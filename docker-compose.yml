@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgis/postgis:15-3.4
+    image: postgis/postgis:latest
     platform: linux/arm64
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -11,7 +11,7 @@ services:
     restart: unless-stopped
 
   mariadb:
-    image: mariadb:10
+    image: mariadb:latest
     platform: linux/arm64
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
