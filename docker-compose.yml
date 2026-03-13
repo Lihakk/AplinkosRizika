@@ -4,6 +4,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASS=${DB_PASSWORD}
+      - POSTGRES_DB=postgres
       - ALLOW_IP_RANGE=0.0.0.0/0
     ports:
       - "5432:5432"
