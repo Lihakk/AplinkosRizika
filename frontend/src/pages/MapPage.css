@@ -1,0 +1,117 @@
+.map-page {
+  padding: 20px;
+}
+
+.map {
+  width: 100%;
+  height: 500px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  margin-bottom: 10px;
+  padding: 8px 16px;
+  font-size: 16px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.info-panel {
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 12px;
+}
+.search-error {
+  color: red;
+  font-size: 0.8rem;
+}
+.search-bar {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+
+  display: flex;
+  gap: 12px;
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.25);
+}
+
+.search-bar input {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  width: 350px;
+  font-size: 16px;
+}
+
+.search-bar button {
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  background: #e0e0e0;
+  border: 1px solid #bbb;
+}
+
+/* Slide-out panel container */
+.side-panel {
+  position: fixed;
+  top: 0;
+  left: -40%; /* hidden by default */
+  width: 40%;
+  height: 100%;
+  background: #ffffff;
+  box-shadow: 4px 0 12px rgba(0,0,0,0.25);
+  z-index: 2000;
+  transition: left 0.3s ease;
+  display: flex;
+  flex-direction: row;
+}
+
+/* When open */
+.side-panel.open {
+  left: 0;
+}
+
+/* Toggle button */
+.panel-toggle {
+  position: absolute;
+  top: 50%;
+  right: -40px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 80px;
+  background: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  font-size: 24px;
+  font-weight: bold;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+}
+
+/* Panel content */
+.panel-content {
+  padding: 24px;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.panel-content h2 {
+  margin-bottom: 12px;
+}
+
+.panel-content ul {
+  margin-top: 10px;
+  padding-left: 20px;
+}
+
