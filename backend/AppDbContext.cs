@@ -8,5 +8,5 @@ public class AppDbContext : DbContext
     }
 
     // Example table — you will add your own later
-    public DbSet<Risk> Risks { get; set; }
+    // public DbSet<Risk> Risks { get; set; }
 }
