@@ -12,13 +12,13 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
-  mariadb:
-    image: mariadb:latest
-    environment:
-      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - mariadata:/var/lib/mysql
-    restart: unless-stopped
+ # mariadb:
+   # image: mariadb:latest
+    #environment:
+    #  MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+    #volumes:
+     # - mariadata:/var/lib/mysql
+   # restart: unless-stopped
 
   backend:
     build: 
