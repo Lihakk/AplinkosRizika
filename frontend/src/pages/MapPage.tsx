@@ -186,7 +186,7 @@ export default function MapPage() {
       setElderships([]);
       return;
     }
-    const res = await fetch("http://localhost:5000/api/Eldership");
+    const res = await fetch("http://144.24.247.126:5000/api/Eldership");
     const data = await res.json();
     setElderships(data);
   };
@@ -196,7 +196,7 @@ export default function MapPage() {
       setCrimeByEldership([]);
       return;
     }
-    const res = await fetch("http://localhost:5000/api/Crimegrid/by-eldership");
+    const res = await fetch("http://144.24.247.126/api/Crimegrid/by-eldership");
     const data = await res.json();
     setCrimeByEldership(data);
   };
