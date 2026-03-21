@@ -7,8 +7,7 @@ builder.Services.AddSwaggerGen();
 
 var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
 
-var connectionString =
-    $"Host=localhost;Port=5432;Database=postgres;Username=postgres;Password={password}";
+var connectionString = builder.Configuration.GetConnectionString("Postgres");
 // Add services to the container.
 builder.Services.AddControllers();
 
