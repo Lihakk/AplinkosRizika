@@ -1,17 +1,28 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 DotNetEnv.Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var password = Environment.GetEnvironmentVariable("DB_PASSWORD");
+var localPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
 
 var connectionString = builder.Configuration.GetConnectionString("Postgres");
-// Add services to the container.
+
+
+if (!string.IsNullOrEmpty(localPassword))
+{
+    var dbBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+    {
+        Password = localPassword
+    };
+    connectionString = dbBuilder.ConnectionString;
+}
+
 builder.Services.AddControllers();
 
-// Register DbContext using the connection string from appsettings.json or appsettings.Development.json
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString, x => x.UseNetTopologySuite()));
 
