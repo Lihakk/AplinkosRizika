@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { MapPin, Search } from "lucide-react";
 import "./CitySelect.css";
 
-// I added a few more cities and sorted them so the grid looks full and organized
+
 const allCities = [
   "Alytus", "Ariogala", "Jonava", "Jurbarkas", "Kaunas", 
   "Kėdainiai", "Klaipėda", "Marijampolė", "Mažeikiai", "Panevėžys", 
