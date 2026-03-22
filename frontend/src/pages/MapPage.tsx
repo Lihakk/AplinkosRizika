@@ -196,7 +196,7 @@ export default function MapPage() {
       setCrimeByEldership([]);
       return;
     }
-    const res = await fetch("http://144.24.247.126/api/Crimegrid/by-eldership");
+    const res = await fetch("http://144.24.247.126:5000/api/Crimegrid/by-eldership");
     const data = await res.json();
     setCrimeByEldership(data);
   };
