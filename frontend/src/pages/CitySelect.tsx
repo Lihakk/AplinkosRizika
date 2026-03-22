@@ -1,51 +1,55 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useRef } from "react";
+import { MapPin, Search } from "lucide-react";
 import "./CitySelect.css";
 
-const cities = [
-  "Kaunas",
-  "Vilnius",
-  "Klaipėda",
-  "Šiauliai",
-  "Panevėžys",
-  "Ariogala",
-  "Vilkaviškis",
-  "Raseiniai",
-  "Jurbarkas",
-  "Kėdainiai"
-];
+
+const allCities = [
+  "Alytus", "Ariogala", "Jonava", "Jurbarkas", "Kaunas", 
+  "Kėdainiai", "Klaipėda", "Marijampolė", "Mažeikiai", "Panevėžys", 
+  "Raseiniai", "Šiauliai", "Tauragė", "Telšiai", "Vilnius", "Vilkaviškis"
+].sort();
 
 export default function CitySelect() {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (scrollRef.current) {
-      e.preventDefault();
-      scrollRef.current.scrollBy({
-      left: e.deltaY * 0.9,   // smaller multiplier = smoother movement
-      behavior: "smooth"
-    });
-    }
-  };
+  // Dynamically filter cities based on the search input
+  const filteredCities = allCities.filter(city =>
+    city.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="city-select-container">
-      <h1>Pasirink miestą</h1>
+    <div className="landing-container">
+      <div className="content-wrapper">
+        <h1 className="title">Aplinkos Rizika</h1>
+        <p className="subtitle">Pasirinkite miestą analizei</p>
 
-      <div
-        className="city-scroll"
-        ref={scrollRef}
-        onWheel={handleWheel}
-      >
-        {cities.map((city) => (
-          <Link
-            key={city}
-            to={`/map?city=${encodeURIComponent(city)}`}
-            className="city-card"
-          >
-            {city}
-          </Link>
-        ))}
+        {/* Dynamic Search Bar */}
+        <div className="search-container">
+          <Search className="search-icon" size={20} />
+          <input
+            type="text"
+            placeholder="Ieškoti miesto..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+            autoFocus
+          />
+        </div>
+
+        {/* Filtered Grid */}
+        <div className="city-grid">
+          {filteredCities.length > 0 ? (
+            filteredCities.map((city) => (
+              <Link key={city} to={`/map?city=${encodeURIComponent(city)}`} className="city-link">
+                <MapPin size={18} />
+                <span>{city}</span>
+              </Link>
+            ))
+          ) : (
+            <div className="no-results">Miestas "{searchQuery}" nerastas.</div>
+          )}
+        </div>
       </div>
     </div>
   );
