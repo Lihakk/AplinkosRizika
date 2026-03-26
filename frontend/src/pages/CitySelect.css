@@ -1,54 +1,107 @@
-/* Container at the top center */
-.city-select-container {
-  padding-top: 40px;
-  width: 100%;
-
+/* Solid, clean dark background */
+.landing-container {
+  min-height: 100vh;
   display: flex;
-  flex-direction: column;
-  align-items: center;   /* horizontal center */
-  justify-content: flex-start; /* stay at top */
+  justify-content: center;
+  align-items: center;
+  background-color: #0f172a; 
+  color: #f8fafc;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
-/* Title styling */
-.city-select-container h1 {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-/* Horizontal scroll row */
-.city-scroll {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  overflow-y: hidden;
-
-  padding: 20px;
+.content-wrapper {
   width: 100%;
   max-width: 900px;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-  background: #1e1e1e;
+/* Typography */
+.title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+  letter-spacing: -1px;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: #94a3b8;
+  margin-bottom: 40px;
+}
+
+/* The Search Bar */
+.search-container {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 40px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+}
+
+.search-input {
+  width: 100%;
+  padding: 16px 16px 16px 48px;
+  font-size: 1.1rem;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  scroll-behavior: smooth;
-}
-
-/* Hide ugly scrollbar (optional but nice) */
-.city-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-/* City buttons */
-.city-card {
-  flex: 0 0 auto;
-  padding: 16px 24px;
-  background: #2b2b2b;
+  border: 2px solid #334155;
+  background-color: #1e293b;
   color: white;
-  border-radius: 12px;
-  text-decoration: none;
-  font-weight: bold;
-  transition: 0.2s;
+  transition: all 0.2s ease;
+  box-sizing: border-box; /* Prevents input from breaking layout */
 }
 
-.city-card:hover {
-  background: #3a3a3a;
+.search-input:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+/* The Grid */
+.city-grid {
+  display: grid;
+  /* This automatically makes the grid 2, 3, or 4 columns depending on screen size! */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.city-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  color: #e2e8f0;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* Hover effect */
+.city-link:hover {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.no-results {
+  grid-column: 1 / -1; /* spans the whole grid */
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+  font-size: 1.1rem;
 }
