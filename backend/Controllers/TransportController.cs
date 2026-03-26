@@ -23,19 +23,19 @@ public class TransportController : ControllerBase
 
     public class ArrivalDto {
         [JsonPropertyName("route")]
-        public string Route { get; set; }
+        public string? Route { get; set; }
         
         [JsonPropertyName("destination")]
-        public string Destination { get; set; }
+        public string? Destination { get; set; }
         
         [JsonPropertyName("time")]
-        public string Time { get; set; }
+        public string? Time { get; set; }
         
         [JsonPropertyName("shapeId")]
-        public string ShapeId { get; set; } 
+        public string? ShapeId { get; set; } 
     }
     public class FrequencyDto {
-        public string Hour { get; set; }
+        public string? Hour { get; set; }
         public int Count { get; set; }
     }
     
