@@ -15,8 +15,6 @@ import { geocode } from "../utils/geocoding";
 // --- Types ---
 type CrimeKey = "asm" | "trv" | "nar";
 
-interface SearchResult { lat: string; lon: string; display_name: string; }
-
 interface BusStop {
   id: number;
   lat: number;
