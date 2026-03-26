@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Eldership> Elderships { get; set; }
     public DbSet<Crimegrid> Crimegrids { get; set; }
+    public DbSet<School> Schools { get; set; }
     public DbSet<CrimeByEldership> CrimeByEldership { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -50,6 +51,17 @@ public class AppDbContext : DbContext
         {
             entity.HasNoKey();
             entity.ToView(null); // tells EF this is not a real table/view
+        });
+
+        modelBuilder.Entity<School>(entity =>
+        {
+            entity.ToTable("planet_osm_point");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.Point).HasColumnName("point");
         });
     }
 }

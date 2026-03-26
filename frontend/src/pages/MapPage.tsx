@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, GeoJSON, useMap, Popup } from "react-leaflet";
 import { Icon, LatLng, divIcon } from "leaflet";
-import { Search, ArrowLeft, ShieldAlert, Map as MapIcon, X } from "lucide-react";
+import { Search, ArrowLeft, ShieldAlert, Map as MapIcon, X, School } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import "./MapPage.css";
@@ -47,6 +47,13 @@ const cityCoordinates: Record<string, [number, number]> = {
   "Panevėžys": [55.7348, 24.3575]
 };
 
+const schoolIcon = divIcon({
+  html: '<div style="font-size: 22px;">🏫</div>',
+  className: 'school-icon',
+  iconSize: [24, 24],
+  iconAnchor: [12, 24],
+});
+
 // --- Map Subcomponents ---
 function MapController({ target, clearTarget }: { target: LatLng | null, clearTarget: () => void }) {
   const map = useMap();
@@ -89,6 +96,7 @@ export default function MapPage() {
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
   // Data State
+  const [schools, setSchools] = useState<any[]>([]);
   const [elderships, setElderships] = useState<any[]>([]);
   const [crimeByEldership, setCrimeByEldership] = useState<any[]>([]);
   const [busStops, setBusStops] = useState<BusStop[]>([]);
@@ -228,6 +236,22 @@ export default function MapPage() {
     setIsLoading(p => ({ ...p, crimes: false }));
   };
 
+const toggleSchools = async () => {
+  if (schools.length > 0) return setSchools([]);
+  try {
+    const res = await fetch(`${API_URL}/api/School`);
+    const raw = await res.json();
+    const parsed = raw.map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      geo: JSON.parse(s.point) // GeoJSON point
+    }));
+    setSchools(parsed);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
   // --- Computations ---
   const processedCrimeData = useMemo(() => {
     return crimeByEldership.map((e) => ({
@@ -264,6 +288,7 @@ export default function MapPage() {
           <h3>Sluoksniai</h3>
           <button className={`layer-btn ${elderships.length ? 'active' : ''}`} onClick={toggleElderships}><MapIcon size={16} /> Seniūnijos</button>
           <button className={`layer-btn ${crimeByEldership.length ? 'active' : ''}`} onClick={toggleCrimes}><ShieldAlert size={16} /> Nusikalstamumas</button>
+          <button className={`layer-btn ${schools.length ? 'active' : ''}`} onClick={toggleSchools}><School size={16} /> Mokyklos</button>
 
           {crimeByEldership.length > 0 && (
             <div className="crime-filters">
@@ -312,6 +337,18 @@ export default function MapPage() {
             style={{ fillColor: getCrimeColor(e.combined / maxValue), color: "white", weight: 1, fillOpacity: 0.6 }}
             onEachFeature={(_, layer) => layer.bindPopup(`<strong>${e.eldership_Name}</strong><br>Nusikaltimų: ${e.combined}`)}
           />
+        ))}
+
+        {/* 3. Schools */}
+        {schools.map((s) => (
+          <Marker
+            key={s.id}
+            position={[s.geo.coordinates[1], s.geo.coordinates[0]]}
+            icon={schoolIcon}>
+            <Popup>
+              <strong>{s.name || "Mokykla"}</strong>
+            </Popup>
+          </Marker>
         ))}
 
         {/* 4. Bus Stops */}
