@@ -2,6 +2,18 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, GeoJSON, useMap, Popup } from "react-leaflet";
 import { Icon, LatLng, divIcon } from "leaflet";
+import { Search, ArrowLeft, ShieldAlert, Map as MapIcon, X } from "lucide-react";
+import "leaflet/dist/leaflet.css";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+import "./MapPage.css";
+
+import LocationMarker from "../components/LocationMarker";
+import RoutingControl from "../components/RoutingControl";
+import WalkScore from "../components/WalkScore";
+import { geocode } from "../utils/geocoding";
+
+// --- Types ---
+type CrimeKey = "asm" | "trv" | "nar";
 import { Search, ArrowLeft, ShieldAlert, Map as MapIcon, X } from "lucide-react"; 
 import "leaflet/dist/leaflet.css";
 import "./MapPage.css";
@@ -14,6 +26,11 @@ interface BusStop {
   id: number;
   lat: number;
   lon: number;
+  name: string;
+}
+
+interface SelectedPlace {
+  latlng: LatLng;
   name: string;
 }
 
@@ -61,11 +78,20 @@ export default function MapPage() {
   const city = params.get("city") ?? "Kaunas";
   const cityCenter = cityCoordinates[city] || cityCoordinates["Kaunas"];
 
+  // UI State (original)
   // UI State
   const [searchTarget, setSearchTarget] = useState<LatLng | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState({ elderships: false, crimes: false, search: false });
+
+  // Routing State (added from prototype)
+  const [routeStart, setRouteStart] = useState<LatLng | null>(null);
+  const [routeEnd, setRouteEnd] = useState<LatLng | null>(null);
+  const [destQuery, setDestQuery] = useState("");
+
+  // Place info (added from prototype)
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
   // Data State
   const [elderships, setElderships] = useState<any[]>([]);
@@ -80,6 +106,7 @@ export default function MapPage() {
   });
   const [stopFrequency, setStopFrequency] = useState<any[]>([]);
 
+  // --- Search Handler (original, now using geocoding utility) ---
   // --- Handlers ---
 
   const fetchNearbyBusStops = async (lat: number, lng: number) => {
@@ -126,6 +153,11 @@ const handleShowPath = async (shapeId: string) => {
     if (!searchQuery.trim()) return;
     setIsLoading(p => ({ ...p, search: true }));
     try {
+      const pos = await geocode(searchQuery);
+      if (pos) {
+        setSearchTarget(pos);
+        setPanelOpen(true);
+        fetchNearbyBusStops(pos.lat, pos.lng);
       const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=1`);
       const data: SearchResult[] = await res.json();
       if (data.length > 0) {
@@ -134,6 +166,95 @@ const handleShowPath = async (shapeId: string) => {
         fetchNearbyBusStops(lat, lon);
       }
     } finally { setIsLoading(p => ({ ...p, search: false })); }
+  };
+
+  // --- Route Handler (added from prototype) ---
+  const handleRouteSearch = async () => {
+    if (!searchQuery.trim() || !destQuery.trim()) return;
+    setIsLoading(p => ({ ...p, search: true }));
+    try {
+      const start = await geocode(searchQuery);
+      const end = await geocode(destQuery);
+      if (start && end) {
+        setSearchTarget(start);
+        setRouteStart(start);
+        setRouteEnd(end);
+      }
+    } finally { setIsLoading(p => ({ ...p, search: false })); }
+  };
+
+  const clearRoute = () => {
+    setRouteStart(null);
+    setRouteEnd(null);
+    setDestQuery("");
+  };
+
+  // --- LocationMarker Handlers (added from prototype) ---
+  const handleDoubleClickResult = (latlng: LatLng, address: string) => {
+    setSearchQuery(address);
+    setSearchTarget(latlng);
+    setRouteStart(null);
+    setRouteEnd(null);
+    setPanelOpen(true);
+    fetchNearbyBusStops(latlng.lat, latlng.lng);
+  };
+
+  const handleClickClear = () => {
+    setSearchQuery("");
+    setDestQuery("");
+    setSearchTarget(null);
+    setRouteStart(null);
+    setRouteEnd(null);
+    setSelectedPlace(null);
+    setPanelOpen(false);
+    setBusStops([]);
+  };
+
+  // --- Data Fetching Handlers ---
+  const fetchNearbyBusStops = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(`${API_URL}/api/Transport/nearby-stops?lat=${lat}&lon=${lng}`);
+      const data = await res.json();
+      setBusStops(data.map((stop: any) => {
+        const geo = JSON.parse(stop.geometry);
+        return { id: stop.id, lat: geo.coordinates[1], lon: geo.coordinates[0], name: stop.name || "Stotelė" };
+      }));
+    } catch (e) { console.error(e); }
+  };
+
+  const handleStopClick = async (lat: number, lon: number) => {
+    setLoadingArrivals(true);
+    setStopArrivals([]); setStopRoutes([]);
+    try {
+      const arrRes = await fetch(`${API_URL}/api/Transport/stop-arrivals?lat=${lat}&lon=${lon}`);
+      setStopArrivals(await arrRes.json());
+      const routeRes = await fetch(`${API_URL}/api/Transport/stop-routes?lat=${lat}&lon=${lon}`);
+      setStopRoutes(await routeRes.json());
+      const freqRes = await fetch(`${API_URL}/api/Transport/stop-frequency?lat=${lat}&lon=${lon}`);
+      setStopFrequency(await freqRes.json());
+    } catch (e) { console.error(e); } finally { setLoadingArrivals(false); }
+  };
+
+  const handleShowPath = async (shapeId: string) => {
+    if (!shapeId) return;
+    setSelectedPath(null);
+    try {
+      const res = await fetch(`${API_URL}/api/Transport/route-path/${shapeId}`);
+      const data = await res.json();
+      if (data.geometry) {
+        setSelectedPath(JSON.parse(data.geometry));
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const toggleElderships = async () => {
+    if (elderships.length > 0) return setElderships([]);
+    setIsLoading(p => ({ ...p, elderships: true }));
+    try {
+      const res = await fetch(`${API_URL}/api/Eldership`);
+      setElderships(await res.json());
+    } catch (e) { console.error(e); }
+    setIsLoading(p => ({ ...p, elderships: false }));
   };
 
   const toggleElderships = async () => {
@@ -169,6 +290,21 @@ const handleShowPath = async (shapeId: string) => {
 
   return (
     <div className="map-page-container">
+
+      {/* LEFT UI: Navigation & Search (original layout) */}
+      <div className="floating-ui top-left">
+        <button className="glass-btn icon-btn" onClick={() => navigate(-1)}><ArrowLeft size={20} /> Atgal</button>
+        <div className="glass-panel search-box">
+          <input type="text" placeholder={`${city} adresas...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} />
+          <button onClick={handleSearch} disabled={isLoading.search}>{isLoading.search ? "..." : <Search size={18} />}</button>
+        </div>
+        {selectedPlace && (
+          <div className="glass-panel search-box">
+            <input type="text" placeholder="Tikslo adresas..." value={destQuery} onChange={(e) => setDestQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRouteSearch()} />
+            <button onClick={handleRouteSearch} disabled={isLoading.search}>{isLoading.search ? "..." : <Search size={18} />}</button>
+            {routeStart && <button className="clear-route-btn" onClick={clearRoute}><X size={14} /></button>}
+          </div>
+        )}
       
       {/* LEFT UI: Navigation & Search */}
       <div className="floating-ui top-left">
@@ -198,6 +334,26 @@ const handleShowPath = async (shapeId: string) => {
       </div>
 
       {/* MAP */}
+      <MapContainer center={cityCenter} zoom={12} zoomControl={false} doubleClickZoom={false} className="full-screen-map">
+
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        />
+        <CityViewController center={cityCenter} />
+
+        {/* Routing overlay */}
+        <RoutingControl start={routeStart} end={routeEnd} />
+
+        {/* Location marker with double-click support */}
+        <LocationMarker
+          customIcon={customIcon}
+          externalPosition={searchTarget}
+          onPlaceSelected={(place) => setSelectedPlace(place)}
+          onDoubleClickResult={handleDoubleClickResult}
+          onClickClear={handleClickClear}
+
+      {/* MAP */}
       <MapContainer center={cityCenter} zoom={12} zoomControl={false} className="full-screen-map">
         
         {/*<TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OSM contributors' />*/}
@@ -217,6 +373,9 @@ const handleShowPath = async (shapeId: string) => {
 
         {/* 3. Crime Heatmap */}
         {processedCrimeData.map((e, i) => (
+          <GeoJSON
+            key={`crime-${i}`}
+            data={JSON.parse(e.geometry)}
           <GeoJSON 
             key={`crime-${i}`} 
             data={JSON.parse(e.geometry)} 
@@ -237,6 +396,7 @@ const handleShowPath = async (shapeId: string) => {
                     <ul className="arrival-list">
                       {stopArrivals.map((a, idx) => (
                         <li key={idx} className="arrival-item" onClick={(e) => { e.stopPropagation(); handleShowPath(a.shapeId); }}>
+                          <span className="route-badge">{a.route}</span>
                           <span className="route-badge">{a.route}</span> 
                           <div className="arrival-info">
                             <strong>{a.time.substring(0, 5)}</strong>
@@ -275,10 +435,29 @@ const handleShowPath = async (shapeId: string) => {
         <button className="panel-close-btn" onClick={() => setPanelOpen(false)}>✕</button>
         <div className="panel-content">
           <h2>Vietos Analizė</h2>
+
+          {/* Place info from marker */}
+          {selectedPlace && (
+            <div className="stat-card">
+              <h3>Pasirinkta vieta</h3>
+              <p className="place-address">{selectedPlace.name}</p>
+              <p className="place-coords">
+                {selectedPlace.latlng.lat.toFixed(5)}, {selectedPlace.latlng.lng.toFixed(5)}
+              </p>
+            </div>
+          )}
+
+          {/* WalkScore */}
+          {selectedPlace && (
+            <WalkScore latlng={selectedPlace.latlng} />
+          )}
+
+          {/* Transit stats */}
           <div className="stat-card">
             <h3>Viešasis transportas</h3>
             <p>Stotelės (750m): <strong>{busStops.length}</strong></p>
             <div className="stat-card">
+              <h3>Susisiekimo Intensyvumas</h3>
               <h3>Susisiekimo Intensyvumas</h3>    
               {stopFrequency.length > 0 ? (
                 <>
@@ -289,6 +468,21 @@ const handleShowPath = async (shapeId: string) => {
                     <span className="stat-label">autobusai / valandą (vidurkis)</span>
                   </div>
                   <div className="frequency-mini-chart">
+                    {stopFrequency.map((f, i) => (
+                      <div key={i} className="chart-bar-wrapper">
+                        <div
+                          className="chart-bar"
+                          style={{ height: `${(f.count / 15) * 100}%` }}
+                          title={`${f.hour}:00 val. - ${f.count} autob.`}
+                        />
+                        <span className="bar-label">{f.hour}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p>Pasirinkite stotelę, kad pamatytumėte analizę.</p>
+              )}
                   {stopFrequency.map((f, i) => (
                         <div key={i} className="chart-bar-wrapper">
                           <div 
