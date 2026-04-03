@@ -3,11 +3,11 @@ import { LatLng } from "leaflet";
 import { fetchWalkScore } from "../utils/walkscore";
 
 function scoreLabel(score: number): string {
-  if (score >= 90) return "Puikiai vaikščiojama";
-  if (score >= 70) return "Labai gerai vaikščiojama";
-  if (score >= 50) return "Gerai vaikščiojama";
-  if (score >= 25) return "Vidutiniškai vaikščiojama";
-  return "Prastai vaikščiojama";
+  if (score >= 90) return "Puikiai";
+  if (score >= 70) return "Labai gerai";
+  if (score >= 50) return "Gerai";
+  if (score >= 25) return "Normaliai";
+  return "Prastai";
 }
 
 interface WalkScoreProps {

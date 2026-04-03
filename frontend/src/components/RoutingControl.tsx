@@ -8,6 +8,7 @@ import { useMap } from "react-leaflet";
 const routeIcon = new L.Icon({
   iconUrl: "./icons/placeholder.png",
   iconSize: [38, 38],
+  iconAnchor: [19, 38],
 });
 
 interface RoutingControlProps {
@@ -32,12 +33,18 @@ export default function RoutingControl({ start, end }: RoutingControlProps) {
       controlRef.current.setWaypoints([start, end]);
     } else {
       controlRef.current = L.Routing.control({
+        position: 'bottomleft',
+        router: L.Routing.osrmv1({
+          serviceUrl: 'https://routing.openstreetmap.de/routed-car/route/v1',
+          profile: 'driving',
+        }),
         waypoints: [start, end],
         routeWhileDragging: true,
         showAlternatives: true,
         addWaypoints: false,
         fitSelectedRoutes: true,
-        createMarker: function (_i: number, waypoint: L.Routing.Waypoint) {
+        createMarker: function (i: number, waypoint: L.Routing.Waypoint) {
+          if (i === 0) return null as unknown as L.Marker;
           return L.marker(waypoint.latLng, { icon: routeIcon });
         },
         altLineOptions: {
