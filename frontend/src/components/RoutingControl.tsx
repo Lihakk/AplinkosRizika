@@ -33,6 +33,7 @@ export default function RoutingControl({ start, end }: RoutingControlProps) {
       controlRef.current.setWaypoints([start, end]);
     } else {
       controlRef.current = L.Routing.control({
+        // @ts-ignore - 'position' is valid in Leaflet but missing in @types/leaflet-routing-machine
         position: 'bottomleft',
         router: L.Routing.osrmv1({
           serviceUrl: 'https://routing.openstreetmap.de/routed-car/route/v1',
