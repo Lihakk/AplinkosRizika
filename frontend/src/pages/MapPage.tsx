@@ -6,6 +6,7 @@ import { Search, ArrowLeft, ShieldAlert, Map as MapIcon, X, School, Crosshair } 
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import "./MapPage.css";
+import L from "leaflet";
 
 import LocationMarker from "../components/LocationMarker";
 import RoutingControl from "../components/RoutingControl";
@@ -28,8 +29,13 @@ interface SelectedPlace {
 }
 
 // --- Config & Constants ---
+<<<<<<< mangirdas-april4th
 const API_URL = import.meta.env.VITE_API_URL || "http://144.24.247.126:5000";
 const customIcon = new Icon({ iconUrl: "./icons/placeholder.png", iconSize: [38, 38], iconAnchor: [19, 38] });
+=======
+const API_URL = import.meta.env.VITE_API_URL || "http://144.24.247.126:5178";
+const customIcon = new Icon({ iconUrl: "./icons/placeholder.png", iconSize: [38, 38] });
+>>>>>>> main
 
 const busIcon = divIcon({
   html: '<div style="font-size: 24px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🚏</div>',
@@ -82,30 +88,55 @@ function CityViewController({ center }: { center: [number, number] }) {
   return null;
 }
 
+// --- PART 3: Find closest police ---
+function findClosestPolice(userPos: L.LatLng, policeList: any[]) {
+  let closest = null;
+  let minDist = Infinity;
+
+  for (const p of policeList) {
+    const [lng, lat] = p.geo.coordinates;
+    const pos = L.latLng(lat, lng);
+
+    const dist = userPos.distanceTo(pos); // meters
+
+    if (dist < minDist) {
+      minDist = dist;
+      closest = { ...p, distance: dist };
+    }
+  }
+
+  return closest;
+}
+
 export default function MapPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const city = params.get("city") ?? "Kaunas";
   const cityCenter = cityCoordinates[city] || cityCoordinates["Kaunas"];
+  // --- Map reference ---
+  const mapRef = useRef<L.Map | null>(null);
 
   // --- State ---
-  // UI State
   const [searchTarget, setSearchTarget] = useState<LatLng | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState({ elderships: false, crimes: false, search: false });
 
+<<<<<<< mangirdas-april4th
   // Routing State
+=======
+>>>>>>> main
   const [routeStart, setRouteStart] = useState<LatLng | null>(null);
   const [routeEnd, setRouteEnd] = useState<LatLng | null>(null);
   const [destQuery, setDestQuery] = useState("");
   const [pickingDest, setPickingDest] = useState(false);
 
-  // Place info 
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
-  // Data State
   const [schools, setSchools] = useState<any[]>([]);
+  const [police, setPolice] = useState<any[]>([]);
+  const [closestPolice, setClosestPolice] = useState<{ latlng: LatLng; name: string; distance: number } | null>(null);
+  const [showingPolice, setShowingPolice] = useState(false);
   const [elderships, setElderships] = useState<any[]>([]);
   const [crimeByEldership, setCrimeByEldership] = useState<any[]>([]);
   const [busStops, setBusStops] = useState<BusStop[]>([]);
@@ -117,6 +148,43 @@ export default function MapPage() {
     asm: true, trv: true, nar: true,
   });
   const [stopFrequency, setStopFrequency] = useState<any[]>([]);
+
+  // --- PART 4: Show closest police ---
+  const hidePolice = () => {
+    setClosestPolice(null);
+    setShowingPolice(false);
+  };
+
+  async function showClosestPolice(userPos: L.LatLng) {
+    if (!mapRef.current) return;
+
+    const policeData = police.length > 0 ? police : await loadPolice();
+    if (!policeData || policeData.length === 0) return;
+
+    const closest = findClosestPolice(userPos, policeData);
+    if (!closest) return;
+
+    const [lng, lat] = closest.geo.coordinates;
+    const name = closest.name || "Policijos nuovada";
+
+    setClosestPolice({
+      latlng: L.latLng(lat, lng),
+      name,
+      distance: closest.distance,
+    });
+    setShowingPolice(true);
+
+    mapRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
+  }
+
+  useEffect(() => {
+    if (!showingPolice) return;
+    const target = selectedPlace?.latlng ?? searchTarget;
+    if (target) {
+      showClosestPolice(target);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPlace, searchTarget, showingPolice]);
 
   // --- Handlers ---
   const fetchNearbyBusStops = async (lat: number, lng: number) => {
@@ -225,6 +293,7 @@ export default function MapPage() {
   };
 
   const handleClickClear = () => {
+    hidePolice();
     setSearchQuery("");
     setDestQuery("");
     setSearchTarget(null);
@@ -255,21 +324,39 @@ export default function MapPage() {
     setIsLoading(p => ({ ...p, crimes: false }));
   };
 
-const toggleSchools = async () => {
-  if (schools.length > 0) return setSchools([]);
-  try {
-    const res = await fetch(`${API_URL}/api/School`);
-    const raw = await res.json();
-    const parsed = raw.map((s: any) => ({
-      id: s.id,
-      name: s.name,
-      geo: JSON.parse(s.point) // GeoJSON point
-    }));
-    setSchools(parsed);
-  } catch (err) {
-    console.error(err);
-  }
-};
+  const toggleSchools = async () => {
+    if (schools.length > 0) return setSchools([]);
+    try {
+      const res = await fetch(`${API_URL}/api/School`);
+      const raw = await res.json();
+      const parsed = raw.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        geo: JSON.parse(s.point)
+      }));
+      setSchools(parsed);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadPolice = async () => {
+    if (police.length > 0) return police;
+    try {
+      const res = await fetch(`${API_URL}/api/Police`);
+      const raw = await res.json();
+      const parsed = raw.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        geo: JSON.parse(p.point)
+      }));
+      setPolice(parsed);
+      return parsed;
+    } catch (err) {
+      console.error("Failed to load police", err);
+      return [];
+    }
+  };
 
   // --- Computations ---
   const processedCrimeData = useMemo(() => {
@@ -315,6 +402,19 @@ const toggleSchools = async () => {
           <button className={`layer-btn ${elderships.length ? 'active' : ''}`} onClick={toggleElderships}><MapIcon size={16} /> Seniūnijos</button>
           <button className={`layer-btn ${crimeByEldership.length ? 'active' : ''}`} onClick={toggleCrimes}><ShieldAlert size={16} /> Nusikalstamumas</button>
           <button className={`layer-btn ${schools.length ? 'active' : ''}`} onClick={toggleSchools}><School size={16} /> Mokyklos</button>
+          <button className={`layer-btn ${showingPolice ? 'active' : ''}`} onClick={() => {
+              if (showingPolice) {
+                hidePolice();
+                return;
+              }
+
+              if (selectedPlace) showClosestPolice(selectedPlace.latlng);
+              else if (searchTarget) showClosestPolice(searchTarget);
+              else alert("Pasirinkite vietą žemėlapyje");
+            }}
+          >
+            {showingPolice ? '👮 Slėpti policiją' : '👮 Artimiausia policija'}
+          </button>
 
           {crimeByEldership.length > 0 && (
             <div className="crime-filters">
@@ -328,18 +428,28 @@ const toggleSchools = async () => {
       </div>
 
       {/* MAP */}
+<<<<<<< mangirdas-april4th
       <div className="map-wrapper">
       <MapContainer center={cityCenter} zoom={12} zoomControl={false} doubleClickZoom={false} className="full-screen-map" maxBounds={cityBounds} maxBoundsViscosity={1.0} minZoom={12}>
+=======
+      <MapContainer
+        center={cityCenter}
+        zoom={12}
+        zoomControl={false}
+        doubleClickZoom={false}
+        className="full-screen-map"
+        ref={mapRef}
+
+      >
+>>>>>>> main
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          attribution='&copy; OpenStreetMap contributors &copy; CARTO'
         />
         <CityViewController center={cityCenter} />
 
-        {/* Routing overlay */}
         <RoutingControl start={routeStart} end={routeEnd} />
 
-        {/* Location marker */}
         <LocationMarker
           customIcon={customIcon}
           externalPosition={searchTarget}
@@ -350,21 +460,27 @@ const toggleSchools = async () => {
           onDestPicked={handleDestPicked}
         />
 
-        {/* 1. Selected Bus Path Line */}
         {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
 
-        {/* 2. Eldership Boundaries */}
         {elderships.map((e, i) => (
           <GeoJSON key={`eldership-${i}`} data={JSON.parse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }} />
         ))}
 
-        {/* 3. Crime Heatmap */}
         {processedCrimeData.map((e, i) => (
-          <GeoJSON 
-            key={`crime-${i}`} 
-            data={JSON.parse(e.geometry)} 
-            style={{ fillColor: getCrimeColor(e.combined / maxValue), color: "white", weight: 1, fillOpacity: 0.6 }}
-            onEachFeature={(_, layer) => layer.bindPopup(`<strong>${e.eldership_Name}</strong><br>Nusikaltimų: ${e.combined}`)}
+          <GeoJSON
+            key={`crime-${i}`}
+            data={JSON.parse(e.geometry)}
+            style={{
+              fillColor: getCrimeColor(e.combined / maxValue),
+              color: "white",
+              weight: 1,
+              fillOpacity: 0.6
+            }}
+            onEachFeature={(_, layer) =>
+              layer.bindPopup(
+                `<strong>${e.eldership_Name}</strong><br>Nusikaltimų: ${e.combined}`
+              )
+            }
           />
         ))}
 
@@ -373,40 +489,87 @@ const toggleSchools = async () => {
           <Marker
             key={s.id}
             position={[s.geo.coordinates[1], s.geo.coordinates[0]]}
-            icon={schoolIcon}>
+            icon={schoolIcon}
+          >
             <Popup>
               <strong>{s.name || "Mokykla"}</strong>
             </Popup>
           </Marker>
         ))}
 
+        {closestPolice && (
+          <Marker
+            position={closestPolice.latlng}
+            icon={divIcon({
+              html: '<div style="font-size: 22px;">👮‍♂️</div>',
+              className: 'police-icon',
+              iconSize: [24, 24],
+              iconAnchor: [12, 24],
+            })}
+          >
+            <Popup>
+              <strong>{closestPolice.name}</strong><br />
+              Atstumas: {(closestPolice.distance / 1000).toFixed(2)} km
+            </Popup>
+          </Marker>
+        )}
+
         {/* 4. Bus Stops */}
         {busStops.map((stop) => (
-          <Marker key={stop.id} position={[stop.lat, stop.lon]} icon={busIcon} eventHandlers={{ click: () => handleStopClick(stop.lat, stop.lon) }}>
+          <Marker
+            key={stop.id}
+            position={[stop.lat, stop.lon]}
+            icon={busIcon}
+            eventHandlers={{ click: () => handleStopClick(stop.lat, stop.lon) }}
+          >
             <Popup>
               <div className="bus-popup">
                 <h3>{stop.name}</h3>
+
                 <div className="popup-section">
                   <p className="section-title">🕒 Artimiausi atvykimai</p>
-                  {loadingArrivals ? <p className="sub-text">Kraunama...</p> : stopArrivals.length > 0 ? (
+                  {loadingArrivals ? (
+                    <p className="sub-text">Kraunama...</p>
+                  ) : stopArrivals.length > 0 ? (
                     <ul className="arrival-list">
                       {stopArrivals.map((a, idx) => (
-                        <li key={idx} className="arrival-item" onClick={(e) => { e.stopPropagation(); handleShowPath(a.shapeId); }}>
-                          <span className="route-badge">{a.route}</span> 
+                        <li
+                          key={idx}
+                          className="arrival-item"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShowPath(a.shapeId);
+                          }}
+                        >
+                          <span className="route-badge">{a.route}</span>
                           <div className="arrival-info">
                             <strong>{a.time.substring(0, 5)}</strong>
-                            <span className="destination-text">{a.destination}</span>
+                            <span className="destination-text">
+                              {a.destination}
+                            </span>
                           </div>
                         </li>
                       ))}
                     </ul>
-                  ) : <p className="sub-text">Atvykimų nerasta.</p>}
+                  ) : (
+                    <p className="sub-text">Atvykimų nerasta.</p>
+                  )}
                 </div>
+
                 <hr className="popup-divider" />
+
                 <div className="popup-section">
                   <p className="section-title">🚌 Visi maršrutai</p>
                   <div className="route-grid">
-                    {stopRoutes.map((r, idx) => <div key={idx} className="route-tag" title={r.destination}>{r.route}</div>)}
+                    {stopRoutes.map((r, idx) => (
+                      <div
+                        key={idx}
+                        className="route-tag"
+                        title={r.destination}
+                      >
+                        {r.route}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -414,7 +577,17 @@ const toggleSchools = async () => {
           </Marker>
         ))}
 
+<<<<<<< mangirdas-april4th
         <MapController target={searchTarget} clearTarget={() => setSearchTarget(null)} />
+=======
+        {/* Search marker */}
+        {searchTarget && <Marker position={searchTarget} icon={customIcon} />}
+
+        <MapController
+          target={searchTarget}
+          clearTarget={() => setSearchTarget(null)}
+        />
+>>>>>>> main
       </MapContainer>
       </div>
 
@@ -427,47 +600,60 @@ const toggleSchools = async () => {
 
       {/* SIDE PANEL */}
       <div className={`side-panel ${panelOpen ? "open" : ""}`}>
-        <button className="panel-close-btn" onClick={() => setPanelOpen(false)}>✕</button>
+        <button className="panel-close-btn" onClick={() => setPanelOpen(false)}>
+          ✕
+        </button>
+
         <div className="panel-content">
           <h2>Vietos Analizė</h2>
 
-          {/* Place info from marker */}
+          {/* Place info */}
           {selectedPlace && (
             <div className="stat-card">
               <h3>Pasirinkta vieta</h3>
               <p className="place-address">{selectedPlace.name}</p>
               <p className="place-coords">
-                {selectedPlace.latlng.lat.toFixed(5)}, {selectedPlace.latlng.lng.toFixed(5)}
+                {selectedPlace.latlng.lat.toFixed(5)},{" "}
+                {selectedPlace.latlng.lng.toFixed(5)}
               </p>
             </div>
           )}
 
           {/* WalkScore */}
-          {selectedPlace && (
-            <WalkScore latlng={selectedPlace.latlng} />
-          )}
+          {selectedPlace && <WalkScore latlng={selectedPlace.latlng} />}
 
           {/* Transit stats */}
           <div className="stat-card">
             <h3>Viešasis transportas</h3>
-            <p>Stotelės (750m): <strong>{busStops.length}</strong></p>
-            
+            <p>
+              Stotelės (750m): <strong>{busStops.length}</strong>
+            </p>
+
             <div className="stat-card" style={{ marginTop: "1rem" }}>
-              <h3>Susisiekimo Intensyvumas</h3>  
+              <h3>Susisiekimo Intensyvumas</h3>
+
               {stopFrequency.length > 0 ? (
                 <>
                   <div className="main-stat">
                     <span className="stat-number">
-                      {(stopFrequency.reduce((acc, curr) => acc + curr.count, 0) / stopFrequency.length).toFixed(1)}
+                      {(
+                        stopFrequency.reduce(
+                          (acc, curr) => acc + curr.count,
+                          0
+                        ) / stopFrequency.length
+                      ).toFixed(1)}
                     </span>
-                    <span className="stat-label">autobusai / valandą (vidurkis)</span>
+                    <span className="stat-label">
+                      autobusai / valandą (vidurkis)
+                    </span>
                   </div>
+
                   <div className="frequency-mini-chart">
                     {stopFrequency.map((f, i) => (
                       <div key={i} className="chart-bar-wrapper">
-                        <div 
-                          className="chart-bar" 
-                          style={{ height: `${(f.count / 15) * 100}%` }} 
+                        <div
+                          className="chart-bar"
+                          style={{ height: `${(f.count / 15) * 100}%` }}
                           title={`${f.hour}:00 val. - ${f.count} autob.`}
                         />
                         <span className="bar-label">{f.hour}</span>
