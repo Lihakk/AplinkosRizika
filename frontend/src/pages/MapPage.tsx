@@ -29,13 +29,12 @@ interface SelectedPlace {
 }
 
 // --- Config & Constants ---
-<<<<<<< mangirdas-april4th
-const API_URL = import.meta.env.VITE_API_URL || "http://144.24.247.126:5000";
-const customIcon = new Icon({ iconUrl: "./icons/placeholder.png", iconSize: [38, 38], iconAnchor: [19, 38] });
-=======
 const API_URL = import.meta.env.VITE_API_URL || "http://144.24.247.126:5178";
-const customIcon = new Icon({ iconUrl: "./icons/placeholder.png", iconSize: [38, 38] });
->>>>>>> main
+const customIcon = new Icon({ 
+  iconUrl: "./icons/placeholder.png", 
+  iconSize: [38, 38], 
+  iconAnchor: [19, 38] 
+});
 
 const busIcon = divIcon({
   html: '<div style="font-size: 24px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🚏</div>',
@@ -113,6 +112,7 @@ export default function MapPage() {
   const navigate = useNavigate();
   const city = params.get("city") ?? "Kaunas";
   const cityCenter = cityCoordinates[city] || cityCoordinates["Kaunas"];
+  
   // --- Map reference ---
   const mapRef = useRef<L.Map | null>(null);
 
@@ -122,10 +122,7 @@ export default function MapPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState({ elderships: false, crimes: false, search: false });
 
-<<<<<<< mangirdas-april4th
   // Routing State
-=======
->>>>>>> main
   const [routeStart, setRouteStart] = useState<LatLng | null>(null);
   const [routeEnd, setRouteEnd] = useState<LatLng | null>(null);
   const [destQuery, setDestQuery] = useState("");
@@ -183,7 +180,6 @@ export default function MapPage() {
     if (target) {
       showClosestPolice(target);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPlace, searchTarget, showingPolice]);
 
   // --- Handlers ---
@@ -428,167 +424,161 @@ export default function MapPage() {
       </div>
 
       {/* MAP */}
-<<<<<<< mangirdas-april4th
       <div className="map-wrapper">
-      <MapContainer center={cityCenter} zoom={12} zoomControl={false} doubleClickZoom={false} className="full-screen-map" maxBounds={cityBounds} maxBoundsViscosity={1.0} minZoom={12}>
-=======
-      <MapContainer
-        center={cityCenter}
-        zoom={12}
-        zoomControl={false}
-        doubleClickZoom={false}
-        className="full-screen-map"
-        ref={mapRef}
-
-      >
->>>>>>> main
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; OpenStreetMap contributors &copy; CARTO'
-        />
-        <CityViewController center={cityCenter} />
-
-        <RoutingControl start={routeStart} end={routeEnd} />
-
-        <LocationMarker
-          customIcon={customIcon}
-          externalPosition={searchTarget}
-          onPlaceSelected={(place) => setSelectedPlace(place)}
-          onDoubleClickResult={handleDoubleClickResult}
-          onClickClear={handleClickClear}
-          pickingDest={pickingDest}
-          onDestPicked={handleDestPicked}
-        />
-
-        {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
-
-        {elderships.map((e, i) => (
-          <GeoJSON key={`eldership-${i}`} data={JSON.parse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }} />
-        ))}
-
-        {processedCrimeData.map((e, i) => (
-          <GeoJSON
-            key={`crime-${i}`}
-            data={JSON.parse(e.geometry)}
-            style={{
-              fillColor: getCrimeColor(e.combined / maxValue),
-              color: "white",
-              weight: 1,
-              fillOpacity: 0.6
-            }}
-            onEachFeature={(_, layer) =>
-              layer.bindPopup(
-                `<strong>${e.eldership_Name}</strong><br>Nusikaltimų: ${e.combined}`
-              )
-            }
+        <MapContainer
+          center={cityCenter}
+          zoom={12}
+          zoomControl={false}
+          doubleClickZoom={false}
+          className="full-screen-map"
+          maxBounds={cityBounds}
+          maxBoundsViscosity={1.0}
+          minZoom={12}
+          ref={mapRef}
+        >
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            attribution='&copy; OpenStreetMap contributors &copy; CARTO'
           />
-        ))}
+          <CityViewController center={cityCenter} />
 
-        {/* 3. Schools */}
-        {schools.map((s) => (
-          <Marker
-            key={s.id}
-            position={[s.geo.coordinates[1], s.geo.coordinates[0]]}
-            icon={schoolIcon}
-          >
-            <Popup>
-              <strong>{s.name || "Mokykla"}</strong>
-            </Popup>
-          </Marker>
-        ))}
+          <RoutingControl start={routeStart} end={routeEnd} />
 
-        {closestPolice && (
-          <Marker
-            position={closestPolice.latlng}
-            icon={divIcon({
-              html: '<div style="font-size: 22px;">👮‍♂️</div>',
-              className: 'police-icon',
-              iconSize: [24, 24],
-              iconAnchor: [12, 24],
-            })}
-          >
-            <Popup>
-              <strong>{closestPolice.name}</strong><br />
-              Atstumas: {(closestPolice.distance / 1000).toFixed(2)} km
-            </Popup>
-          </Marker>
-        )}
+          <LocationMarker
+            customIcon={customIcon}
+            externalPosition={searchTarget}
+            onPlaceSelected={(place) => setSelectedPlace(place)}
+            onDoubleClickResult={handleDoubleClickResult}
+            onClickClear={handleClickClear}
+            pickingDest={pickingDest}
+            onDestPicked={handleDestPicked}
+          />
 
-        {/* 4. Bus Stops */}
-        {busStops.map((stop) => (
-          <Marker
-            key={stop.id}
-            position={[stop.lat, stop.lon]}
-            icon={busIcon}
-            eventHandlers={{ click: () => handleStopClick(stop.lat, stop.lon) }}
-          >
-            <Popup>
-              <div className="bus-popup">
-                <h3>{stop.name}</h3>
+          {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
 
-                <div className="popup-section">
-                  <p className="section-title">🕒 Artimiausi atvykimai</p>
-                  {loadingArrivals ? (
-                    <p className="sub-text">Kraunama...</p>
-                  ) : stopArrivals.length > 0 ? (
-                    <ul className="arrival-list">
-                      {stopArrivals.map((a, idx) => (
-                        <li
+          {elderships.map((e, i) => (
+            <GeoJSON key={`eldership-${i}`} data={JSON.parse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }} />
+          ))}
+
+          {processedCrimeData.map((e, i) => (
+            <GeoJSON
+              key={`crime-${i}`}
+              data={JSON.parse(e.geometry)}
+              style={{
+                fillColor: getCrimeColor(e.combined / maxValue),
+                color: "white",
+                weight: 1,
+                fillOpacity: 0.6
+              }}
+              onEachFeature={(_, layer) =>
+                layer.bindPopup(
+                  `<strong>${e.eldership_Name}</strong><br>Nusikaltimų: ${e.combined}`
+                )
+              }
+            />
+          ))}
+
+          {/* 3. Schools */}
+          {schools.map((s) => (
+            <Marker
+              key={s.id}
+              position={[s.geo.coordinates[1], s.geo.coordinates[0]]}
+              icon={schoolIcon}
+            >
+              <Popup>
+                <strong>{s.name || "Mokykla"}</strong>
+              </Popup>
+            </Marker>
+          ))}
+
+          {closestPolice && (
+            <Marker
+              position={closestPolice.latlng}
+              icon={divIcon({
+                html: '<div style="font-size: 22px;">👮‍♂️</div>',
+                className: 'police-icon',
+                iconSize: [24, 24],
+                iconAnchor: [12, 24],
+              })}
+            >
+              <Popup>
+                <strong>{closestPolice.name}</strong><br />
+                Atstumas: {(closestPolice.distance / 1000).toFixed(2)} km
+              </Popup>
+            </Marker>
+          )}
+
+          {/* 4. Bus Stops */}
+          {busStops.map((stop) => (
+            <Marker
+              key={stop.id}
+              position={[stop.lat, stop.lon]}
+              icon={busIcon}
+              eventHandlers={{ click: () => handleStopClick(stop.lat, stop.lon) }}
+            >
+              <Popup>
+                <div className="bus-popup">
+                  <h3>{stop.name}</h3>
+
+                  <div className="popup-section">
+                    <p className="section-title">🕒 Artimiausi atvykimai</p>
+                    {loadingArrivals ? (
+                      <p className="sub-text">Kraunama...</p>
+                    ) : stopArrivals.length > 0 ? (
+                      <ul className="arrival-list">
+                        {stopArrivals.map((a, idx) => (
+                          <li
+                            key={idx}
+                            className="arrival-item"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShowPath(a.shapeId);
+                            }}
+                          >
+                            <span className="route-badge">{a.route}</span>
+                            <div className="arrival-info">
+                              <strong>{a.time.substring(0, 5)}</strong>
+                              <span className="destination-text">
+                                {a.destination}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="sub-text">Atvykimų nerasta.</p>
+                    )}
+                  </div>
+
+                  <hr className="popup-divider" />
+
+                  <div className="popup-section">
+                    <p className="section-title">🚌 Visi maršrutai</p>
+                    <div className="route-grid">
+                      {stopRoutes.map((r, idx) => (
+                        <div
                           key={idx}
-                          className="arrival-item"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleShowPath(a.shapeId);
-                          }}
+                          className="route-tag"
+                          title={r.destination}
                         >
-                          <span className="route-badge">{a.route}</span>
-                          <div className="arrival-info">
-                            <strong>{a.time.substring(0, 5)}</strong>
-                            <span className="destination-text">
-                              {a.destination}
-                            </span>
-                          </div>
-                        </li>
+                          {r.route}
+                        </div>
                       ))}
-                    </ul>
-                  ) : (
-                    <p className="sub-text">Atvykimų nerasta.</p>
-                  )}
-                </div>
-
-                <hr className="popup-divider" />
-
-                <div className="popup-section">
-                  <p className="section-title">🚌 Visi maršrutai</p>
-                  <div className="route-grid">
-                    {stopRoutes.map((r, idx) => (
-                      <div
-                        key={idx}
-                        className="route-tag"
-                        title={r.destination}
-                      >
-                        {r.route}
-                      </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+              </Popup>
+            </Marker>
+          ))}
 
-<<<<<<< mangirdas-april4th
-        <MapController target={searchTarget} clearTarget={() => setSearchTarget(null)} />
-=======
-        {/* Search marker */}
-        {searchTarget && <Marker position={searchTarget} icon={customIcon} />}
+          {/* Search marker */}
+          {searchTarget && <Marker position={searchTarget} icon={customIcon} />}
 
-        <MapController
-          target={searchTarget}
-          clearTarget={() => setSearchTarget(null)}
-        />
->>>>>>> main
-      </MapContainer>
+          <MapController
+            target={searchTarget}
+            clearTarget={() => setSearchTarget(null)}
+          />
+        </MapContainer>
       </div>
 
       {/* Path Clear Button */}
