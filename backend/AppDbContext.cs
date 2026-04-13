@@ -12,10 +12,11 @@ public class AppDbContext : DbContext
     public DbSet<Eldership> Elderships { get; set; }
     public DbSet<Crimegrid> Crimegrids { get; set; }
     public DbSet<School> Schools { get; set; }
+    public DbSet<Police> PoliceStations { get; set; }
     public DbSet<CrimeByEldership> CrimeByEldership { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
+    {    
         modelBuilder.Entity<Eldership>(entity =>
         {
             entity.ToTable("elderships");
@@ -55,9 +56,18 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<School>(entity =>
         {
-            entity.ToTable("planet_osm_point");
+            entity.HasNoKey();
+            entity.ToView(null);
 
-            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.Point).HasColumnName("point");
+        });
+
+        modelBuilder.Entity<Police>(entity =>
+        {
+            entity.HasNoKey();
+            entity.ToView(null);
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Name).HasColumnName("name");
