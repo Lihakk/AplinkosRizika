@@ -14,6 +14,8 @@ interface LocationMarkerProps {
   onPlaceSelected: (place: SelectedPlace | null) => void;
   onDoubleClickResult: (latlng: LatLng, address: string) => void;
   onClickClear: () => void;
+  pickingDest?: boolean;
+  onDestPicked?: (latlng: LatLng, address: string) => void;
 }
 
 export default function LocationMarker({
@@ -22,6 +24,8 @@ export default function LocationMarker({
   onPlaceSelected,
   onDoubleClickResult,
   onClickClear,
+  pickingDest,
+  onDestPicked,
 }: LocationMarkerProps) {
   const [position, setPosition] = useState<LatLng | null>(null);
   const prevExternal = useRef<LatLng | null>(null);
@@ -29,7 +33,15 @@ export default function LocationMarker({
   const isDblClick = useRef(false);
 
   useMapEvents({
-    click() {
+    click(e) {
+      // If picking destination mode, use this click for destination
+      if (pickingDest && onDestPicked) {
+        reverseGeocode(e.latlng.lat, e.latlng.lng).then((address) => {
+          onDestPicked(e.latlng, address);
+        });
+        return;
+      }
+
       // Delay click — if dblclick follows within 300ms, this gets cancelled
       if (clickTimer.current) clearTimeout(clickTimer.current);
       clickTimer.current = setTimeout(() => {

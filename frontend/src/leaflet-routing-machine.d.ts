@@ -2,8 +2,16 @@ import * as L from "leaflet";
 
 declare module "leaflet" {
   namespace Routing {
+    interface OSRMv1Options {
+      serviceUrl?: string;
+      profile?: string;
+    }
+
+    function osrmv1(options?: OSRMv1Options): any;
+
     interface ControlOptions {
       waypoints: L.LatLng[];
+      router?: any;
       routeWhileDragging?: boolean;
       showAlternatives?: boolean;
       addWaypoints?: boolean;

@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, GeoJSON, useMap, Popup } from "react-leaflet";
-import { Icon, LatLng, divIcon } from "leaflet";
-import { Search, ArrowLeft, ShieldAlert, Map as MapIcon, X, School } from "lucide-react";
+import { Icon, LatLng, LatLngBounds, divIcon } from "leaflet";
+import { Search, ArrowLeft, ShieldAlert, Map as MapIcon, X, School, Crosshair } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import "./MapPage.css";
@@ -29,8 +29,13 @@ interface SelectedPlace {
 }
 
 // --- Config & Constants ---
+<<<<<<< mangirdas-april4th
+const API_URL = import.meta.env.VITE_API_URL || "http://144.24.247.126:5000";
+const customIcon = new Icon({ iconUrl: "./icons/placeholder.png", iconSize: [38, 38], iconAnchor: [19, 38] });
+=======
 const API_URL = import.meta.env.VITE_API_URL || "http://144.24.247.126:5178";
 const customIcon = new Icon({ iconUrl: "./icons/placeholder.png", iconSize: [38, 38] });
+>>>>>>> main
 
 const busIcon = divIcon({
   html: '<div style="font-size: 24px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🚏</div>',
@@ -47,6 +52,11 @@ const cityCoordinates: Record<string, [number, number]> = {
   "Šiauliai": [55.9349, 23.3137],
   "Panevėžys": [55.7348, 24.3575]
 };
+
+const cityBounds = new LatLngBounds(
+  [54.80450402603192, 23.741060247315946],  // south-west
+  [55.00378796631874, 24.102934157560853],  // north-east
+);
 
 const schoolIcon = divIcon({
   html: '<div style="font-size: 22px;">🏫</div>',
@@ -69,7 +79,10 @@ function MapController({ target, clearTarget }: { target: LatLng | null, clearTa
 
 function CityViewController({ center }: { center: [number, number] }) {
   const map = useMap();
+  const prevCenter = useRef(center);
   useEffect(() => {
+    if (prevCenter.current[0] === center[0] && prevCenter.current[1] === center[1]) return;
+    prevCenter.current = center;
     map.flyTo(center, 12, { animate: true, duration: 1.5 });
   }, [center, map]);
   return null;
@@ -109,9 +122,14 @@ export default function MapPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState({ elderships: false, crimes: false, search: false });
 
+<<<<<<< mangirdas-april4th
+  // Routing State
+=======
+>>>>>>> main
   const [routeStart, setRouteStart] = useState<LatLng | null>(null);
   const [routeEnd, setRouteEnd] = useState<LatLng | null>(null);
   const [destQuery, setDestQuery] = useState("");
+  const [pickingDest, setPickingDest] = useState(false);
 
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
@@ -253,6 +271,16 @@ export default function MapPage() {
     setRouteStart(null);
     setRouteEnd(null);
     setDestQuery("");
+    setPickingDest(false);
+  };
+
+  const handleDestPicked = (latlng: LatLng, address: string) => {
+    setRouteEnd(latlng);
+    setDestQuery(address);
+    setPickingDest(false);
+    if (selectedPlace) {
+      setRouteStart(selectedPlace.latlng);
+    }
   };
 
   const handleDoubleClickResult = (latlng: LatLng, address: string) => {
@@ -342,7 +370,7 @@ export default function MapPage() {
   const getCrimeColor = (norm: number) => norm > 0.8 ? "#800026" : norm > 0.6 ? "#BD0026" : norm > 0.4 ? "#E31A1C" : norm > 0.2 ? "#FC4E2A" : "#FFEDA0";
 
   return (
-    <div className="map-page-container">
+    <div className={`map-page-container ${pickingDest ? "map-picking-dest" : ""}`}>
 
       {/* LEFT UI: Navigation & Search */}
       <div className="floating-ui top-left">
@@ -355,6 +383,13 @@ export default function MapPage() {
           <div className="glass-panel search-box">
             <input type="text" placeholder="Tikslo adresas..." value={destQuery} onChange={(e) => setDestQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRouteSearch()} />
             <button onClick={handleRouteSearch} disabled={isLoading.search}>{isLoading.search ? "..." : <Search size={18} />}</button>
+            <button
+              className={`pick-dest-btn ${pickingDest ? "active" : ""}`}
+              onClick={() => setPickingDest(p => !p)}
+              title="Pasirinkti tašką žemėlapyje"
+            >
+              <Crosshair size={18} />
+            </button>
             {routeStart && <button className="clear-route-btn" onClick={clearRoute}><X size={14} /></button>}
           </div>
         )}
@@ -393,6 +428,10 @@ export default function MapPage() {
       </div>
 
       {/* MAP */}
+<<<<<<< mangirdas-april4th
+      <div className="map-wrapper">
+      <MapContainer center={cityCenter} zoom={12} zoomControl={false} doubleClickZoom={false} className="full-screen-map" maxBounds={cityBounds} maxBoundsViscosity={1.0} minZoom={12}>
+=======
       <MapContainer
         center={cityCenter}
         zoom={12}
@@ -402,6 +441,7 @@ export default function MapPage() {
         ref={mapRef}
 
       >
+>>>>>>> main
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; OpenStreetMap contributors &copy; CARTO'
@@ -416,6 +456,8 @@ export default function MapPage() {
           onPlaceSelected={(place) => setSelectedPlace(place)}
           onDoubleClickResult={handleDoubleClickResult}
           onClickClear={handleClickClear}
+          pickingDest={pickingDest}
+          onDestPicked={handleDestPicked}
         />
 
         {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
@@ -535,6 +577,9 @@ export default function MapPage() {
           </Marker>
         ))}
 
+<<<<<<< mangirdas-april4th
+        <MapController target={searchTarget} clearTarget={() => setSearchTarget(null)} />
+=======
         {/* Search marker */}
         {searchTarget && <Marker position={searchTarget} icon={customIcon} />}
 
@@ -542,7 +587,9 @@ export default function MapPage() {
           target={searchTarget}
           clearTarget={() => setSearchTarget(null)}
         />
+>>>>>>> main
       </MapContainer>
+      </div>
 
       {/* Path Clear Button */}
       {selectedPath && (
