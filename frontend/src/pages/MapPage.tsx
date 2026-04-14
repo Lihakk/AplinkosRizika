@@ -64,6 +64,49 @@ const schoolIcon = divIcon({
   iconAnchor: [12, 24],
 });
 
+const MAP_FEATURES = [
+  { id: 'health-facilities', label: '🏥 Ligoninės', icon: '🏥', color: '#ef4444' },
+  { id: 'parks', label: '🌳 Parkai', icon: '🌳', color: '#10b981' },
+  { id: 'playgrounds', label: '🛝 Aikštelės', icon: '🛝', color: '#f59e0b' },
+  { id: 'shops', label: '🛒 Parduotuvės', icon: '🛒', color: '#3b82f6' },
+  { id: 'gas-stations', label: '⛽ Degalinės', icon: '⛽', color: '#6366f1' },
+  { id: 'sports-clubs', label: '🏋️ Sporto klubai', icon: '🏋️', color: '#8b5cf6' }
+];
+// Creates a beautiful circular marker with an emoji inside
+const createFeatureIcon = (emoji: string, color: string) => {
+  return divIcon({
+    html: `<div style="background: ${color}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.4); border: 2px solid white; font-size: 16px;">${emoji}</div>`,
+    className: "custom-div-icon",
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15]
+  });
+};
+
+const getFeatureCenter = (geometry: any): [number, number] | null => {
+  if (!geometry || !geometry.coordinates) return null;
+  
+  if (geometry.type === "Point") {
+    return [geometry.coordinates[1], geometry.coordinates[0]];
+  }
+  
+  if (geometry.type === "Polygon") {
+    const coords = geometry.coordinates[0];
+    let latSum = 0, lonSum = 0;
+    coords.forEach((c: any) => { lonSum += c[0]; latSum += c[1]; });
+    return [latSum / coords.length, lonSum / coords.length];
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    const coords = geometry.coordinates[0][0];
+    let latSum = 0, lonSum = 0;
+    coords.forEach((c: any) => { lonSum += c[0]; latSum += c[1]; });
+    return [latSum / coords.length, lonSum / coords.length];
+  }
+  
+  return null;
+};
+
 // --- Map Subcomponents ---
 function MapController({ target, clearTarget }: { target: LatLng | null, clearTarget: () => void }) {
   const map = useMap();
@@ -121,7 +164,8 @@ export default function MapPage() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState({ elderships: false, crimes: false, search: false });
-
+  const [accessibilityData, setAccessibilityData] = useState<any>(null);
+  const [loadingEval, setLoadingEval] = useState(false);
   // Routing State
   const [routeStart, setRouteStart] = useState<LatLng | null>(null);
   const [routeEnd, setRouteEnd] = useState<LatLng | null>(null);
@@ -145,6 +189,10 @@ export default function MapPage() {
     asm: true, trv: true, nar: true,
   });
   const [stopFrequency, setStopFrequency] = useState<any[]>([]);
+
+  // --- NEW STATE FOR ADDED FEATURES ---
+  const [featureLayers, setFeatureLayers] = useState<Record<string, any[]>>({});
+  const [activeFeatures, setActiveFeatures] = useState<Record<string, boolean>>({});
 
   // --- PART 4: Show closest police ---
   const hidePolice = () => {
@@ -182,7 +230,60 @@ export default function MapPage() {
     }
   }, [selectedPlace, searchTarget, showingPolice]);
 
+
+  useEffect(() => {
+    const fetchEvaluation = async () => {
+      if (!selectedPlace) {
+        setAccessibilityData(null);
+        return;
+      }
+      setLoadingEval(true);
+      try {
+        const res = await fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${selectedPlace.latlng.lat}&lon=${selectedPlace.latlng.lng}`);
+        if (res.ok) {
+          setAccessibilityData(await res.json());
+        }
+      } catch (e) {
+        console.error("Evaluation failed", e);
+      } finally {
+        setLoadingEval(false);
+      }
+    };
+
+    fetchEvaluation();
+  }, [selectedPlace]);
   // --- Handlers ---
+
+  const toggleNewFeature = async (endpoint: string) => {
+    if (activeFeatures[endpoint]) {
+      setActiveFeatures(p => ({ ...p, [endpoint]: false }));
+      return;
+    }
+    if (featureLayers[endpoint]?.length > 0) {
+      setActiveFeatures(p => ({ ...p, [endpoint]: true }));
+      return;
+    }
+
+    setIsLoading(p => ({ ...p, search: true }));
+    try {
+      const center = mapRef.current?.getCenter() || { lat: cityCenter[0], lng: cityCenter[1] };
+      const res = await fetch(`${API_URL}/api/MapFeatures/${endpoint}?lat=${center.lat}&lon=${center.lng}`);
+      const data = await res.json();
+      
+      const parsedData = data.map((item: any) => ({
+        ...item,
+        geometry: JSON.parse(item.geometry)
+      }));
+
+      setFeatureLayers(p => ({ ...p, [endpoint]: parsedData }));
+      setActiveFeatures(p => ({ ...p, [endpoint]: true }));
+    } catch (e) {
+      console.error(`Failed to load ${endpoint}`, e);
+    } finally {
+      setIsLoading(p => ({ ...p, search: false }));
+    }
+  };
+
   const fetchNearbyBusStops = async (lat: number, lng: number) => {
     try {
       const res = await fetch(`${API_URL}/api/Transport/nearby-stops?lat=${lat}&lon=${lng}`);
@@ -412,6 +513,19 @@ export default function MapPage() {
             {showingPolice ? '👮 Slėpti policiją' : '👮 Artimiausia policija'}
           </button>
 
+          {/* --- NEW BUTTONS FOR YOUR JIRA TASKS --- */}
+          <hr style={{ margin: '10px 0', borderColor: 'rgba(0,0,0,0.1)' }} />
+          
+          {MAP_FEATURES.map(feature => (
+            <button 
+              key={feature.id}
+              className={`layer-btn ${activeFeatures[feature.id] ? 'active' : ''}`} 
+              onClick={() => toggleNewFeature(feature.id)}
+            >
+              {feature.label}
+            </button>
+          ))}
+
           {crimeByEldership.length > 0 && (
             <div className="crime-filters">
               <hr />
@@ -477,6 +591,33 @@ export default function MapPage() {
               }
             />
           ))}
+
+          {MAP_FEATURES.map(config => {
+            if (!activeFeatures[config.id] || !featureLayers[config.id]) return null;
+            
+            return featureLayers[config.id].map((feature: any, i: number) => {
+              const centerPoint = getFeatureCenter(feature.geometry);
+              if (!centerPoint) return null;
+
+              return (
+                <Marker 
+                  key={`${config.id}-${feature.id}-${i}`} 
+                  position={centerPoint}
+                  icon={createFeatureIcon(config.icon, config.color)}
+                >
+                  <Popup>
+                    <div style={{ textAlign: 'center' }}>
+                      <span style={{ fontSize: '24px' }}>{config.icon}</span>
+                      <h3 style={{ margin: '5px 0' }}>{feature.name || "Nežinomas objektas"}</h3>
+                      <p style={{ margin: '0', color: '#666', fontSize: '12px', textTransform: 'capitalize' }}>
+                        {feature.type || config.id}
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            });
+          })}
 
           {/* 3. Schools */}
           {schools.map((s) => (
@@ -656,6 +797,51 @@ export default function MapPage() {
               )}
             </div>
           </div>
+          {selectedPlace && (
+            <div className="stat-card" style={{ marginTop: '1rem' }}>
+              <h3>Pasiekiamumo Įvertinimas</h3>
+              
+              {loadingEval ? (
+                <p>Skaičiuojami atstumai...</p>
+              ) : accessibilityData ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
+                    <div style={{ 
+                      fontSize: '32px', 
+                      fontWeight: 'bold', 
+                      color: accessibilityData.totalScore > 75 ? '#10b981' : accessibilityData.totalScore > 40 ? '#f59e0b' : '#ef4444' 
+                    }}>
+                      {accessibilityData.totalScore}/100
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#64748b' }}>
+                      Paskaičiuota pagal atstumus iki būtiniausių paslaugų.
+                    </div>
+                  </div>
+
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {accessibilityData.features.map((feature: any, idx: number) => (
+                      <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '20px' }}>{feature.icon}</span>
+                          <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{feature.type}</div>
+                            <div style={{ fontSize: '12px', color: '#64748b' }}>{feature.name}</div>
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 'bold', color: '#3b82f6', fontSize: '14px' }}>
+                          {feature.distance < 1000 
+                            ? `${Math.round(feature.distance)} m` 
+                            : `${(feature.distance / 1000).toFixed(1)} km`}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p>Nepavyko gauti vertinimo duomenų.</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
