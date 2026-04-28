@@ -228,6 +228,10 @@ export default function MapPage() {
   const [featureLayers, setFeatureLayers] = useState<Record<string, any[]>>({});
   const [activeFeatures, setActiveFeatures] = useState<Record<string, boolean>>({});
 
+  // --- CRIME ELDERSHIP POPUP STATE ---
+  const [selectedCrimeEldership, setSelectedCrimeEldership] = useState<any>(null);
+  const crimeLayerRef = useRef<any>(null);
+
   // --- PART 4: Show closest police ---
   const hidePolice = () => {
     setClosestPolice(null);
@@ -510,6 +514,33 @@ export default function MapPage() {
   const maxValue = useMemo(() => Math.max(...processedCrimeData.map((e) => e.combined), 1), [processedCrimeData]);
   const getCrimeColor = (norm: number) => norm > 0.8 ? "#800026" : norm > 0.6 ? "#BD0026" : norm > 0.4 ? "#E31A1C" : norm > 0.2 ? "#FC4E2A" : "#FFEDA0";
 
+  // Calculate crime total based on selected crime types
+  const calculateCrimeTotal = (eldership: any) => {
+    return (selectedCrimes.asm ? eldership.asm_Total : 0) + (selectedCrimes.trv ? eldership.trv_Total : 0) + (selectedCrimes.nar ? eldership.vtp_Total : 0);
+  };
+
+  // Open popup on the clicked layer with dynamic content based on selected crimes
+  useEffect(() => {
+    if (crimeLayerRef.current && selectedCrimeEldership) {
+      const popupContent = `
+        <div>
+          <strong>${selectedCrimeEldership.eldership_Name}</strong>
+          <br />
+          Nusikaltimai: <strong>${calculateCrimeTotal(selectedCrimeEldership)}</strong>
+        </div>
+      `;
+      crimeLayerRef.current.bindPopup(popupContent).openPopup();
+      
+      // Close popup when it's closed
+      const closeHandler = () => setSelectedCrimeEldership(null);
+      crimeLayerRef.current.on('popupclose', closeHandler);
+      
+      return () => {
+        crimeLayerRef.current?.off('popupclose', closeHandler);
+      };
+    }
+  }, [selectedCrimeEldership, selectedCrimes]);
+
   const crimeSafetyScore = useMemo<number | null>(() => {
     if (!selectedPlace || processedCrimeData.length === 0) return null;
     const { lat, lng } = selectedPlace.latlng;
@@ -633,7 +664,11 @@ export default function MapPage() {
           {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
 
           {elderships.map((e, i) => (
-            <GeoJSON key={`eldership-${i}`} data={JSON.parse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }} />
+            <GeoJSON key={`eldership-${i}`} data={JSON.parse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }}
+            onEachFeature={(_, layer) =>
+                layer.bindPopup(
+                  `<strong>${e.eldership_Name}</strong>`
+                )}  />
           ))}
 
           {processedCrimeData.map((e, i) => (
@@ -646,11 +681,13 @@ export default function MapPage() {
                 weight: 1,
                 fillOpacity: 0.6
               }}
-              onEachFeature={(_, layer) =>
-                layer.bindPopup(
-                  `<strong>${e.eldership_Name}</strong><br>Nusikaltimų: ${e.combined}`
-                )
-              }
+              onEachFeature={(_, layer) => {
+                layer.on('click', () => {
+                  // Store layer reference and selected crime data
+                  crimeLayerRef.current = layer;
+                  setSelectedCrimeEldership(e);
+                });
+              }}
             />
           ))}
 
@@ -706,7 +743,6 @@ export default function MapPage() {
             >
               <Popup>
                 <strong>{closestPolice.name}</strong><br />
-                Atstumas: {(closestPolice.distance / 1000).toFixed(2)} km
               </Popup>
             </Marker>
           )}
