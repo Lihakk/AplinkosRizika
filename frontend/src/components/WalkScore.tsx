@@ -12,9 +12,10 @@ function scoreLabel(score: number): string {
 
 interface WalkScoreProps {
   latlng: LatLng | null;
+  onScore?: (score: number | null) => void;
 }
 
-export default function WalkScore({ latlng }: WalkScoreProps) {
+export default function WalkScore({ latlng, onScore }: WalkScoreProps) {
   const [score, setScore] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,6 +23,7 @@ export default function WalkScore({ latlng }: WalkScoreProps) {
     if (!latlng) {
       setScore(null);
       setError(null);
+      onScore?.(null);
       return;
     }
 
@@ -31,10 +33,16 @@ export default function WalkScore({ latlng }: WalkScoreProps) {
 
     fetchWalkScore(latlng.lat, latlng.lng)
       .then((data) => {
-        if (!cancelled) setScore(data.score);
+        if (!cancelled) {
+          setScore(data.score);
+          onScore?.(data.score);
+        }
       })
       .catch(() => {
-        if (!cancelled) setError("Nepavyko gauti duomenų");
+        if (!cancelled) {
+          setError("Nepavyko gauti duomenų");
+          onScore?.(null);
+        }
       });
 
     return () => { cancelled = true; };
