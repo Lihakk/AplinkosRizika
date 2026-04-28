@@ -83,6 +83,39 @@ const createFeatureIcon = (emoji: string, color: string) => {
   });
 };
 
+function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const intersect = ((yi > lat) !== (yj > lat)) && (lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function geometryContains(geom: any, lng: number, lat: number): boolean {
+  if (!geom) return false;
+  if (geom.type === "Feature") return geometryContains(geom.geometry, lng, lat);
+  if (geom.type === "Polygon") {
+    if (!pointInRing(lng, lat, geom.coordinates[0])) return false;
+    for (let k = 1; k < geom.coordinates.length; k++) {
+      if (pointInRing(lng, lat, geom.coordinates[k])) return false;
+    }
+    return true;
+  }
+  if (geom.type === "MultiPolygon") {
+    return geom.coordinates.some((poly: number[][][]) => {
+      if (!pointInRing(lng, lat, poly[0])) return false;
+      for (let k = 1; k < poly.length; k++) {
+        if (pointInRing(lng, lat, poly[k])) return false;
+      }
+      return true;
+    });
+  }
+  return false;
+}
+
 const getFeatureCenter = (geometry: any): [number, number] | null => {
   if (!geometry || !geometry.coordinates) return null;
   
@@ -189,6 +222,7 @@ export default function MapPage() {
     asm: true, trv: true, nar: true,
   });
   const [stopFrequency, setStopFrequency] = useState<any[]>([]);
+  const [walkScoreValue, setWalkScoreValue] = useState<number | null>(null);
 
   // --- NEW STATE FOR ADDED FEATURES ---
   const [featureLayers, setFeatureLayers] = useState<Record<string, any[]>>({});
@@ -251,6 +285,16 @@ export default function MapPage() {
     };
 
     fetchEvaluation();
+  }, [selectedPlace]);
+
+  useEffect(() => {
+    if (!selectedPlace || crimeByEldership.length > 0) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/Crimegrid/by-eldership`);
+        setCrimeByEldership(await res.json());
+      } catch (e) { console.error(e); }
+    })();
   }, [selectedPlace]);
   // --- Handlers ---
 
@@ -465,6 +509,24 @@ export default function MapPage() {
 
   const maxValue = useMemo(() => Math.max(...processedCrimeData.map((e) => e.combined), 1), [processedCrimeData]);
   const getCrimeColor = (norm: number) => norm > 0.8 ? "#800026" : norm > 0.6 ? "#BD0026" : norm > 0.4 ? "#E31A1C" : norm > 0.2 ? "#FC4E2A" : "#FFEDA0";
+
+  const crimeSafetyScore = useMemo<number | null>(() => {
+    if (!selectedPlace || processedCrimeData.length === 0) return null;
+    const { lat, lng } = selectedPlace.latlng;
+    const match = processedCrimeData.find((e) => {
+      try { return geometryContains(JSON.parse(e.geometry), lng, lat); }
+      catch { return false; }
+    });
+    if (!match) return null;
+    return Math.round(100 - (match.combined / maxValue) * 100);
+  }, [selectedPlace, processedCrimeData, maxValue]);
+
+  const qualityOfLifeScore = useMemo<number | null>(() => {
+    const parts = [walkScoreValue, accessibilityData?.totalScore, crimeSafetyScore]
+      .filter((v): v is number => typeof v === "number");
+    if (parts.length === 0) return null;
+    return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
+  }, [walkScoreValue, accessibilityData, crimeSafetyScore]);
 
   return (
     <div className={`map-page-container ${pickingDest ? "map-picking-dest" : ""}`}>
@@ -751,7 +813,15 @@ export default function MapPage() {
           )}
 
           {/* WalkScore */}
-          {selectedPlace && <WalkScore latlng={selectedPlace.latlng} />}
+          {selectedPlace && <WalkScore latlng={selectedPlace.latlng} onScore={setWalkScoreValue} />}
+
+          {/* Gyvenimo kokybės balas */}
+          {selectedPlace && qualityOfLifeScore !== null && (
+            <div className="stat-card" style={{ marginTop: '1rem' }}>
+              <h3>Gyvenimo kokybės balas</h3>
+              <p><strong>{qualityOfLifeScore}/100</strong></p>
+            </div>
+          )}
 
           {/* Transit stats */}
           <div className="stat-card">
