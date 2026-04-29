@@ -39,7 +39,7 @@ public class EldershipController : ControllerBase
         return Ok(data);
         }catch (Exception ex)
     {
-        return StatusCode(500, $"Database error: {ex.Message}");
+   return StatusCode(500, new { error = ex.Message, detail = ex.InnerException?.Message });
     }
     }
 }
