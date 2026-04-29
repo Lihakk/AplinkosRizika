@@ -17,6 +17,8 @@ public class EldershipController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+    try
+    {    
         var data = await _db.Elderships
         .FromSqlRaw(@"
             SELECT 
@@ -35,5 +37,9 @@ public class EldershipController : ControllerBase
         .ToListAsync();
 
         return Ok(data);
+        }catch (Exception ex)
+    {
+        return StatusCode(500, $"Database error: {ex.Message}");
+    }
     }
 }
