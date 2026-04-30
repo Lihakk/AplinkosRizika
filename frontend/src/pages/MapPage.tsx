@@ -10,7 +10,7 @@ import L from "leaflet";
 
 import LocationMarker from "../components/LocationMarker";
 import RoutingControl from "../components/RoutingControl";
-import WalkScore from "../components/WalkScore";
+import AnalysisPanel from "../components/AnalysisPanel";
 import { geocode } from "../utils/geocoding";
 
 // --- Types ---
@@ -197,13 +197,12 @@ export default function MapPage() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState({ elderships: false, crimes: false, search: false });
-  const [accessibilityData, setAccessibilityData] = useState<any>(null);
-  const [loadingEval, setLoadingEval] = useState(false);
   // Routing State
   const [routeStart, setRouteStart] = useState<LatLng | null>(null);
   const [routeEnd, setRouteEnd] = useState<LatLng | null>(null);
   const [destQuery, setDestQuery] = useState("");
   const [pickingDest, setPickingDest] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
 
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
@@ -222,7 +221,6 @@ export default function MapPage() {
     asm: true, trv: true, nar: true,
   });
   const [stopFrequency, setStopFrequency] = useState<any[]>([]);
-  const [walkScoreValue, setWalkScoreValue] = useState<number | null>(null);
 
   // --- NEW STATE FOR ADDED FEATURES ---
   const [featureLayers, setFeatureLayers] = useState<Record<string, any[]>>({});
@@ -264,28 +262,6 @@ export default function MapPage() {
     }
   }, [selectedPlace, searchTarget, showingPolice]);
 
-
-  useEffect(() => {
-    const fetchEvaluation = async () => {
-      if (!selectedPlace) {
-        setAccessibilityData(null);
-        return;
-      }
-      setLoadingEval(true);
-      try {
-        const res = await fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${selectedPlace.latlng.lat}&lon=${selectedPlace.latlng.lng}`);
-        if (res.ok) {
-          setAccessibilityData(await res.json());
-        }
-      } catch (e) {
-        console.error("Evaluation failed", e);
-      } finally {
-        setLoadingEval(false);
-      }
-    };
-
-    fetchEvaluation();
-  }, [selectedPlace]);
 
   useEffect(() => {
     if (!selectedPlace || crimeByEldership.length > 0) return;
@@ -413,6 +389,7 @@ export default function MapPage() {
     setRouteEnd(null);
     setDestQuery("");
     setPickingDest(false);
+    setCompareMode(false);
   };
 
   const handleDestPicked = (latlng: LatLng, address: string) => {
@@ -443,6 +420,7 @@ export default function MapPage() {
     setSelectedPlace(null);
     setPanelOpen(false);
     setBusStops([]);
+    setCompareMode(false);
   };
 
   const toggleElderships = async () => {
@@ -510,23 +488,15 @@ export default function MapPage() {
   const maxValue = useMemo(() => Math.max(...processedCrimeData.map((e) => e.combined), 1), [processedCrimeData]);
   const getCrimeColor = (norm: number) => norm > 0.8 ? "#800026" : norm > 0.6 ? "#BD0026" : norm > 0.4 ? "#E31A1C" : norm > 0.2 ? "#FC4E2A" : "#FFEDA0";
 
-  const crimeSafetyScore = useMemo<number | null>(() => {
-    if (!selectedPlace || processedCrimeData.length === 0) return null;
-    const { lat, lng } = selectedPlace.latlng;
+  const crimeScoreFor = (latlng: LatLng | null): number | null => {
+    if (!latlng || processedCrimeData.length === 0) return null;
     const match = processedCrimeData.find((e) => {
-      try { return geometryContains(JSON.parse(e.geometry), lng, lat); }
+      try { return geometryContains(JSON.parse(e.geometry), latlng.lng, latlng.lat); }
       catch { return false; }
     });
     if (!match) return null;
     return Math.round(100 - (match.combined / maxValue) * 100);
-  }, [selectedPlace, processedCrimeData, maxValue]);
-
-  const qualityOfLifeScore = useMemo<number | null>(() => {
-    const parts = [walkScoreValue, accessibilityData?.totalScore, crimeSafetyScore]
-      .filter((v): v is number => typeof v === "number");
-    if (parts.length === 0) return null;
-    return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
-  }, [walkScoreValue, accessibilityData, crimeSafetyScore]);
+  };
 
   return (
     <div className={`map-page-container ${pickingDest ? "map-picking-dest" : ""}`}>
@@ -551,6 +521,14 @@ export default function MapPage() {
             </button>
             {routeStart && <button className="clear-route-btn" onClick={clearRoute}><X size={14} /></button>}
           </div>
+        )}
+        {selectedPlace && routeEnd && !compareMode && (
+          <button
+            className="glass-btn compare-btn"
+            onClick={() => { setCompareMode(true); setPanelOpen(true); }}
+          >
+            Palyginti
+          </button>
         )}
       </div>
 
@@ -792,125 +770,44 @@ export default function MapPage() {
       )}
 
       {/* SIDE PANEL */}
-      <div className={`side-panel ${panelOpen ? "open" : ""}`}>
+      <div className={`side-panel ${panelOpen ? "open" : ""} ${compareMode ? "compare" : ""}`}>
         <button className="panel-close-btn" onClick={() => setPanelOpen(false)}>
           ✕
         </button>
 
         <div className="panel-content">
-          <h2>Vietos Analizė</h2>
-
-          {/* Place info */}
-          {selectedPlace && (
-            <div className="stat-card">
-              <h3>Pasirinkta vieta</h3>
-              <p className="place-address">{selectedPlace.name}</p>
-              <p className="place-coords">
-                {selectedPlace.latlng.lat.toFixed(5)},{" "}
-                {selectedPlace.latlng.lng.toFixed(5)}
-              </p>
-            </div>
-          )}
-
-          {/* WalkScore */}
-          {selectedPlace && <WalkScore latlng={selectedPlace.latlng} onScore={setWalkScoreValue} />}
-
-          {/* Gyvenimo kokybės balas */}
-          {selectedPlace && qualityOfLifeScore !== null && (
-            <div className="stat-card" style={{ marginTop: '1rem' }}>
-              <h3>Gyvenimo kokybės balas</h3>
-              <p><strong>{qualityOfLifeScore}/100</strong></p>
-            </div>
-          )}
-
-          {/* Transit stats */}
-          <div className="stat-card">
-            <h3>Viešasis transportas</h3>
-            <p>
-              Stotelės (750m): <strong>{busStops.length}</strong>
-            </p>
-
-            <div className="stat-card" style={{ marginTop: "1rem" }}>
-              <h3>Susisiekimo Intensyvumas</h3>
-
-              {stopFrequency.length > 0 ? (
-                <>
-                  <div className="main-stat">
-                    <span className="stat-number">
-                      {(
-                        stopFrequency.reduce(
-                          (acc, curr) => acc + curr.count,
-                          0
-                        ) / stopFrequency.length
-                      ).toFixed(1)}
-                    </span>
-                    <span className="stat-label">
-                      autobusai / valandą (vidurkis)
-                    </span>
-                  </div>
-
-                  <div className="frequency-mini-chart">
-                    {stopFrequency.map((f, i) => (
-                      <div key={i} className="chart-bar-wrapper">
-                        <div
-                          className="chart-bar"
-                          style={{ height: `${(f.count / 15) * 100}%` }}
-                          title={`${f.hour}:00 val. - ${f.count} autob.`}
-                        />
-                        <span className="bar-label">{f.hour}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p>Pasirinkite stotelę, kad pamatytumėte analizę.</p>
-              )}
-            </div>
-          </div>
-          {selectedPlace && (
-            <div className="stat-card" style={{ marginTop: '1rem' }}>
-              <h3>Pasiekiamumo Įvertinimas</h3>
-              
-              {loadingEval ? (
-                <p>Skaičiuojami atstumai...</p>
-              ) : accessibilityData ? (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
-                    <div style={{ 
-                      fontSize: '32px', 
-                      fontWeight: 'bold', 
-                      color: accessibilityData.totalScore > 75 ? '#10b981' : accessibilityData.totalScore > 40 ? '#f59e0b' : '#ef4444' 
-                    }}>
-                      {accessibilityData.totalScore}/100
-                    </div>
-                    <div style={{ fontSize: '14px', color: '#64748b' }}>
-                      Paskaičiuota pagal atstumus iki būtiniausių paslaugų.
-                    </div>
-                  </div>
-
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {accessibilityData.features.map((feature: any, idx: number) => (
-                      <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '20px' }}>{feature.icon}</span>
-                          <div>
-                            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{feature.type}</div>
-                            <div style={{ fontSize: '12px', color: '#64748b' }}>{feature.name}</div>
-                          </div>
-                        </div>
-                        <div style={{ fontWeight: 'bold', color: '#3b82f6', fontSize: '14px' }}>
-                          {feature.distance < 1000 
-                            ? `${Math.round(feature.distance)} m` 
-                            : `${(feature.distance / 1000).toFixed(1)} km`}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <p>Nepavyko gauti vertinimo duomenų.</p>
-              )}
-            </div>
+          {compareMode && selectedPlace && routeEnd ? (
+            <>
+              <div className="compare-header">
+                <button className="glass-btn compare-cancel-btn" onClick={() => setCompareMode(false)}>
+                  Atšaukti palyginimą
+                </button>
+              </div>
+              <div className="compare-grid">
+                <AnalysisPanel
+                  latlng={selectedPlace.latlng}
+                  placeName={selectedPlace.name}
+                  subtitle={selectedPlace.name}
+                  crimeSafetyScore={crimeScoreFor(selectedPlace.latlng)}
+                />
+                <AnalysisPanel
+                  latlng={routeEnd}
+                  placeName={destQuery || `${routeEnd.lat.toFixed(5)}, ${routeEnd.lng.toFixed(5)}`}
+                  subtitle={destQuery}
+                  crimeSafetyScore={crimeScoreFor(routeEnd)}
+                />
+              </div>
+            </>
+          ) : selectedPlace ? (
+            <AnalysisPanel
+              latlng={selectedPlace.latlng}
+              placeName={selectedPlace.name}
+              crimeSafetyScore={crimeScoreFor(selectedPlace.latlng)}
+              showTransitFreq
+              stopFrequency={stopFrequency}
+            />
+          ) : (
+            <h2>Vietos Analizė</h2>
           )}
         </div>
       </div>
