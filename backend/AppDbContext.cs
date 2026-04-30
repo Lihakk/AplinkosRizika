@@ -25,7 +25,6 @@ public class AppDbContext : DbContext
 
             entity.Property(e => e.Eldership_Id).HasColumnName("eldership_id");
             entity.Property(e => e.City_Id).HasColumnName("city_id");
-            entity.Property(e => e.Eldership_Code).HasColumnName("eldership_code");
             entity.Property(e => e.Eldership_Name).HasColumnName("eldership_name");
             entity.Property(e => e.Geometry).HasColumnName("geometry");
         });
@@ -59,9 +58,13 @@ public class AppDbContext : DbContext
             entity.HasNoKey();
             entity.ToView(null);
 
-            entity.Property(e => e.Id).HasColumnName("id");
+            
             entity.Property(e => e.Name).HasColumnName("name");
-            entity.Property(e => e.Point).HasColumnName("point");
+            entity.Property(e => e.Rating).HasColumnName("rating");
+            entity.Property(e => e.Location).HasColumnName("location");
+            entity.Property(e => e.City_Id).HasColumnName("city_id");
+            entity.Property(e => e.Type).HasColumnName("tipas");
+            entity.Property(e => e.School_Id).HasColumnName("school_id");
         });
 
         modelBuilder.Entity<Police>(entity =>

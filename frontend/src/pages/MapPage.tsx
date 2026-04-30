@@ -427,9 +427,9 @@ export default function MapPage() {
       const res = await fetch(`${API_URL}/api/School`);
       const raw = await res.json();
       const parsed = raw.map((s: any) => ({
-        id: s.id,
+        school_Id: s.school_id,
         name: s.name,
-        geo: JSON.parse(s.point)
+        location: JSON.parse(s.location)
       }));
       setSchools(parsed);
     } catch (err) {
@@ -573,11 +573,11 @@ export default function MapPage() {
           {elderships.map((e, i) => (
             <GeoJSON key={`eldership-${i}`} data={JSON.parse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }} />
           ))}
-
+          
           {processedCrimeData.map((e, i) => (
             <GeoJSON
               key={`crime-${i}`}
-              data={JSON.parse(e.geometry)}
+              data={JSON.parse(e.Geometry)}
               style={{
                 fillColor: getCrimeColor(e.combined / maxValue),
                 color: "white",
@@ -622,8 +622,8 @@ export default function MapPage() {
           {/* 3. Schools */}
           {schools.map((s) => (
             <Marker
-              key={s.id}
-              position={[s.geo.coordinates[1], s.geo.coordinates[0]]}
+              key={s.school_Id}
+              position={[s.location.coordinates[1], s.location.coordinates[0]]}
               icon={schoolIcon}
             >
               <Popup>

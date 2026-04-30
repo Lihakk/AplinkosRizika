@@ -22,14 +22,12 @@ public class EldershipController : ControllerBase
             SELECT 
                 ""eldership_id"",
                 ""eldership_name"",
-                ""eldership_code"",
                 ST_AsGeoJSON(ST_Transform(""geometry"", 4326)) AS ""geometry""
             FROM ""elderships""
         ")
         .Select(e => new {
             e.Eldership_Id,
             e.Eldership_Name,
-            e.Eldership_Code,
             e.Geometry 
         })
         .ToListAsync();
