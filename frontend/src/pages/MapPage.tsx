@@ -102,6 +102,39 @@ const createFeatureIcon = (emoji: string, color: string) => {
   });
 };
 
+function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const intersect = ((yi > lat) !== (yj > lat)) && (lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function geometryContains(geom: any, lng: number, lat: number): boolean {
+  if (!geom) return false;
+  if (geom.type === "Feature") return geometryContains(geom.geometry, lng, lat);
+  if (geom.type === "Polygon") {
+    if (!pointInRing(lng, lat, geom.coordinates[0])) return false;
+    for (let k = 1; k < geom.coordinates.length; k++) {
+      if (pointInRing(lng, lat, geom.coordinates[k])) return false;
+    }
+    return true;
+  }
+  if (geom.type === "MultiPolygon") {
+    return geom.coordinates.some((poly: number[][][]) => {
+      if (!pointInRing(lng, lat, poly[0])) return false;
+      for (let k = 1; k < poly.length; k++) {
+        if (pointInRing(lng, lat, poly[k])) return false;
+      }
+      return true;
+    });
+  }
+  return false;
+}
+
 const getFeatureCenter = (geometry: any): [number, number] | null => {
   if (!geometry || !geometry.coordinates) return null;
   
@@ -214,10 +247,15 @@ export default function MapPage() {
   });
   const [minSchoolRating, setMinSchoolRating] = useState<number>(1);
   const [stopFrequency, setStopFrequency] = useState<any[]>([]);
+  const [walkScoreValue, setWalkScoreValue] = useState<number | null>(null);
 
   // --- NEW STATE FOR ADDED FEATURES ---
   const [featureLayers, setFeatureLayers] = useState<Record<string, any[]>>({});
   const [activeFeatures, setActiveFeatures] = useState<Record<string, boolean>>({});
+
+  // --- CRIME ELDERSHIP POPUP STATE ---
+  const [selectedCrimeEldership, setSelectedCrimeEldership] = useState<any>(null);
+  const crimeLayerRef = useRef<any>(null);
 
   // --- PART 4: Show closest police ---
   const hidePolice = () => {
@@ -276,6 +314,16 @@ export default function MapPage() {
     };
 
     fetchEvaluation();
+  }, [selectedPlace]);
+
+  useEffect(() => {
+    if (!selectedPlace || crimeByEldership.length > 0) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/Crimegrid/by-eldership`);
+        setCrimeByEldership(await res.json());
+      } catch (e) { console.error(e); }
+    })();
   }, [selectedPlace]);
   // --- Handlers ---
 
@@ -500,6 +548,50 @@ export default function MapPage() {
       return type !== null && selectedSchoolTypes[type] && rating >= minSchoolRating;
     });
   }, [schools, selectedSchoolTypes, minSchoolRating]);
+  // Calculate crime total based on selected crime types
+  const calculateCrimeTotal = (eldership: any) => {
+    return (selectedCrimes.asm ? eldership.asm_Total : 0) + (selectedCrimes.trv ? eldership.trv_Total : 0) + (selectedCrimes.nar ? eldership.vtp_Total : 0);
+  };
+
+  // Open popup on the clicked layer with dynamic content based on selected crimes
+  useEffect(() => {
+    if (crimeLayerRef.current && selectedCrimeEldership) {
+      const popupContent = `
+        <div>
+          <strong>${selectedCrimeEldership.eldership_Name}</strong>
+          <br />
+          Nusikaltimai: <strong>${calculateCrimeTotal(selectedCrimeEldership)}</strong>
+        </div>
+      `;
+      crimeLayerRef.current.bindPopup(popupContent).openPopup();
+      
+      // Close popup when it's closed
+      const closeHandler = () => setSelectedCrimeEldership(null);
+      crimeLayerRef.current.on('popupclose', closeHandler);
+      
+      return () => {
+        crimeLayerRef.current?.off('popupclose', closeHandler);
+      };
+    }
+  }, [selectedCrimeEldership, selectedCrimes]);
+
+  const crimeSafetyScore = useMemo<number | null>(() => {
+    if (!selectedPlace || processedCrimeData.length === 0) return null;
+    const { lat, lng } = selectedPlace.latlng;
+    const match = processedCrimeData.find((e) => {
+      try { return geometryContains(JSON.parse(e.geometry), lng, lat); }
+      catch { return false; }
+    });
+    if (!match) return null;
+    return Math.round(100 - (match.combined / maxValue) * 100);
+  }, [selectedPlace, processedCrimeData, maxValue]);
+
+  const qualityOfLifeScore = useMemo<number | null>(() => {
+    const parts = [walkScoreValue, accessibilityData?.totalScore, crimeSafetyScore]
+      .filter((v): v is number => typeof v === "number");
+    if (parts.length === 0) return null;
+    return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
+  }, [walkScoreValue, accessibilityData, crimeSafetyScore]);
 
   return (
     <div className={`map-page-container ${pickingDest ? "map-picking-dest" : ""}`}>
@@ -635,7 +727,11 @@ export default function MapPage() {
           {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
 
           {elderships.map((e, i) => (
-            <GeoJSON key={`eldership-${i}`} data={JSON.parse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }} />
+            <GeoJSON key={`eldership-${i}`} data={JSON.parse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }}
+            onEachFeature={(_, layer) =>
+                layer.bindPopup(
+                  `<strong>${e.eldership_Name}</strong>`
+                )}  />
           ))}
           
           {processedCrimeData.map((e, i) => (
@@ -648,11 +744,13 @@ export default function MapPage() {
                 weight: 1,
                 fillOpacity: 0.6
               }}
-              onEachFeature={(_, layer) =>
-                layer.bindPopup(
-                  `<strong>${e.eldership_Name}</strong><br>Nusikaltimų: ${e.combined}`
-                )
-              }
+              onEachFeature={(_, layer) => {
+                layer.on('click', () => {
+                  // Store layer reference and selected crime data
+                  crimeLayerRef.current = layer;
+                  setSelectedCrimeEldership(e);
+                });
+              }}
             />
           ))}
 
@@ -714,7 +812,6 @@ export default function MapPage() {
             >
               <Popup>
                 <strong>{closestPolice.name}</strong><br />
-                Atstumas: {(closestPolice.distance / 1000).toFixed(2)} km
               </Popup>
             </Marker>
           )}
@@ -821,7 +918,15 @@ export default function MapPage() {
           )}
 
           {/* WalkScore */}
-          {selectedPlace && <WalkScore latlng={selectedPlace.latlng} />}
+          {selectedPlace && <WalkScore latlng={selectedPlace.latlng} onScore={setWalkScoreValue} />}
+
+          {/* Gyvenimo kokybės balas */}
+          {selectedPlace && qualityOfLifeScore !== null && (
+            <div className="stat-card" style={{ marginTop: '1rem' }}>
+              <h3>Gyvenimo kokybės balas</h3>
+              <p><strong>{qualityOfLifeScore}/100</strong></p>
+            </div>
+          )}
 
           {/* Transit stats */}
           <div className="stat-card">
