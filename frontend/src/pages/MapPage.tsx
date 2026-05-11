@@ -16,6 +16,25 @@ import { geocode } from "../utils/geocoding";
 // --- Types ---
 type CrimeKey = "asm" | "trv" | "nar";
 
+const SCHOOL_TYPES = ["pradine", "progimnazija", "gimnazija"] as const;
+
+type SchoolType = (typeof SCHOOL_TYPES)[number];
+
+const SCHOOL_TYPE_LABELS: Record<SchoolType, string> = {
+  pradine: "Pradinė",
+  progimnazija: "Progimnazija",
+  gimnazija: "Gimnazija",
+};
+
+const normalizeSchoolType = (value: any): SchoolType | null => {
+  if (!value) return null;
+  const lower = String(value).toLowerCase().trim();
+  if (lower.includes("prad")) return "pradine";
+  if (lower.includes("prog")) return "progimnazija";
+  if (lower.includes("gim")) return "gimnazija";
+  return null;
+};
+
 interface BusStop {
   id: number;
   lat: number;
@@ -188,6 +207,12 @@ export default function MapPage() {
   const [selectedCrimes, setSelectedCrimes] = useState<Record<CrimeKey, boolean>>({
     asm: true, trv: true, nar: true,
   });
+  const [selectedSchoolTypes, setSelectedSchoolTypes] = useState<Record<SchoolType, boolean>>({
+    pradine: true,
+    progimnazija: true,
+    gimnazija: true,
+  });
+  const [minSchoolRating, setMinSchoolRating] = useState<number>(1);
   const [stopFrequency, setStopFrequency] = useState<any[]>([]);
 
   // --- NEW STATE FOR ADDED FEATURES ---
@@ -429,6 +454,8 @@ export default function MapPage() {
       const parsed = raw.map((s: any) => ({
         school_Id: s.school_id,
         name: s.name,
+        rating: s.rating,
+        type: normalizeSchoolType(s.Type ?? s.type ?? s.Tipas ?? s.tipas),
         location: JSON.parse(s.location)
       }));
       setSchools(parsed);
@@ -465,6 +492,14 @@ export default function MapPage() {
 
   const maxValue = useMemo(() => Math.max(...processedCrimeData.map((e) => e.combined), 1), [processedCrimeData]);
   const getCrimeColor = (norm: number) => norm > 0.8 ? "#800026" : norm > 0.6 ? "#BD0026" : norm > 0.4 ? "#E31A1C" : norm > 0.2 ? "#FC4E2A" : "#FFEDA0";
+
+  const filteredSchools = useMemo(() => {
+    return schools.filter((s) => {
+      const type = s.type as SchoolType | null;
+      const rating = Number(s.rating ?? 0);
+      return type !== null && selectedSchoolTypes[type] && rating >= minSchoolRating;
+    });
+  }, [schools, selectedSchoolTypes, minSchoolRating]);
 
   return (
     <div className={`map-page-container ${pickingDest ? "map-picking-dest" : ""}`}>
@@ -532,6 +567,35 @@ export default function MapPage() {
               <label><input type="checkbox" checked={selectedCrimes.asm} onChange={() => setSelectedCrimes(p => ({ ...p, asm: !p.asm }))} /> Asmens</label>
               <label><input type="checkbox" checked={selectedCrimes.trv} onChange={() => setSelectedCrimes(p => ({ ...p, trv: !p.trv }))} /> Turtas</label>
               <label><input type="checkbox" checked={selectedCrimes.nar} onChange={() => setSelectedCrimes(p => ({ ...p, nar: !p.nar }))} /> Narkotikai</label>
+            </div>
+          )}
+
+          {schools.length > 0 && (
+            <div className="school-filters">
+              <hr />
+              <div className="school-filter-group">
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Mokyklos tipas</div>
+                {SCHOOL_TYPES.map((type) => (
+                  <label key={type}>
+                    <input
+                      type="checkbox"
+                      checked={selectedSchoolTypes[type]}
+                      onChange={() => setSelectedSchoolTypes(p => ({ ...p, [type]: !p[type] }))}
+                    />
+                    {SCHOOL_TYPE_LABELS[type]}
+                  </label>
+                ))}
+              </div>
+              <div className="school-filter-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 600 }}>Min. reitingas</span>
+                  <select value={minSchoolRating} onChange={(e) => setMinSchoolRating(Number(e.target.value))}>
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
+                      <option key={value} value={value}>{value}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </div>
           )}
         </div>
@@ -620,14 +684,20 @@ export default function MapPage() {
           })}
 
           {/* 3. Schools */}
-          {schools.map((s) => (
+          {filteredSchools.map((s) => (
             <Marker
               key={s.school_Id}
               position={[s.location.coordinates[1], s.location.coordinates[0]]}
               icon={schoolIcon}
             >
               <Popup>
-                <strong>{s.name || "Mokykla"}</strong>
+                <div style={{ fontWeight: 'bold', marginBottom: 6 }}>{s.name || "Mokykla"}</div>
+                <div style={{ fontSize: '13px', color: '#334155' }}>
+                  Tipas: <strong>{s.type ? SCHOOL_TYPE_LABELS[s.type as SchoolType] : 'Nežinomas'}</strong>
+                </div>
+                <div style={{ fontSize: '13px', color: '#334155' }}>
+                  Reitingas: <strong>{Number(s.rating).toFixed(1)}</strong>
+                </div>
               </Popup>
             </Marker>
           ))}
