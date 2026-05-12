@@ -57,13 +57,13 @@ public class CrimegridController : ControllerBase
                 SELECT 
                     e.""eldership_id"" AS ""Eldership_Id"",
                     e.""eldership_name"" AS ""Eldership_Name"",
-                    SUM(c.""asm_2022"") AS ""Asm_Total"",
-                    SUM(c.""trv_2022"") AS ""Trv_Total"",
-                    SUM(c.""vtp_2022"") AS ""Vtp_Total"",
-                    SUM(c.""esm_2022"") AS ""Esm_Total"",
-                    SUM(c.""kit_2022"") AS ""Kit_Total"",
-                    SUM(c.""population_2020"") AS ""Population_Total"",
-                    ST_AsGeoJSON(ST_Transform(e.""geometry"", 4326)) AS ""Geometry""
+                    COALESCE(SUM(c.""asm_2022""), 0) AS ""Asm_Total"",
+                    COALESCE(SUM(c.""trv_2022""), 0) AS ""Trv_Total"",
+                    COALESCE(SUM(c.""vtp_2022""), 0) AS ""Vtp_Total"",
+                    COALESCE(SUM(c.""esm_2022""), 0) AS ""Esm_Total"",
+                    COALESCE(SUM(c.""kit_2022""), 0) AS ""Kit_Total"",
+                    COALESCE(SUM(c.""population_2020""), 0) AS ""Population_Total"",
+                    ST_AsGeoJSON(ST_Transform(e.""geometry"", 4326))::json AS ""Geometry""
                 FROM ""elderships"" e
                 LEFT JOIN ""crime_grid"" c
                     ON ST_Intersects(e.""geometry"", c.""geometry"")

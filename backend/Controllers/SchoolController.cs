@@ -20,16 +20,21 @@ public class SchoolController : ControllerBase
         var data = await _db.Schools
         .FromSqlRaw(@"
             SELECT 
-                ""osm_id"" AS ""id"",
                 ""name"",
-                ST_AsGeoJSON(ST_Transform(""way"", 4326)) AS ""point""
-            FROM ""planet_osm_point""
-            Where ""amenity"" = 'school'
+                ""rating"",
+                ST_AsGeoJSON(location) AS ""location"",
+                ""city_id"",
+                ""tipas"",
+                ""school_id""
+            FROM ""schools""
         ")
         .Select(s => new {
-            s.Id,
             s.Name,
-            s.Point
+            s.Rating,
+            s.Location,
+            s.City_Id,
+            s.Type,
+            s.School_Id,
         })
         .ToListAsync();
 

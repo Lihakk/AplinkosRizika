@@ -121,6 +121,34 @@
   font-size: 14px;
 }
 
+.school-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.school-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.school-filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.school-filters select {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
 .side-panel {
   position: absolute;
   top: 0;
