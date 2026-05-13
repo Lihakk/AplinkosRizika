@@ -14,11 +14,14 @@ const routeIcon = new L.Icon({
 interface RoutingControlProps {
   start: L.LatLng | null;
   end: L.LatLng | null;
+  profile: 'car' | 'bike' | 'foot';
 }
 
-export default function RoutingControl({ start, end }: RoutingControlProps) {
+export default function RoutingControl({ start, end, profile }: RoutingControlProps) {
   const map = useMap();
   const controlRef = useRef<L.Routing.Control | null>(null);
+  //type RouteProfile = 'car' | 'bike' | 'foot';
+  //const [profile, setProfile] = useState<RouteProfile>('car');
 
   useEffect(() => {
     if (!start || !end) {
@@ -29,6 +32,12 @@ export default function RoutingControl({ start, end }: RoutingControlProps) {
       return;
     }
 
+    const profileUrls = {
+      car: 'https://routing.openstreetmap.de/routed-car/route/v1',
+      bike: 'https://routing.openstreetmap.de/routed-bike/route/v1',
+      foot: 'https://routing.openstreetmap.de/routed-foot/route/v1',
+    }
+
     if (controlRef.current) {
       controlRef.current.setWaypoints([start, end]);
     } else {
@@ -36,8 +45,8 @@ export default function RoutingControl({ start, end }: RoutingControlProps) {
         // @ts-ignore - 'position' is valid in Leaflet but missing in @types/leaflet-routing-machine
         position: 'bottomleft',
         router: L.Routing.osrmv1({
-          serviceUrl: 'https://routing.openstreetmap.de/routed-car/route/v1',
-          profile: 'driving',
+          serviceUrl: profileUrls[profile],
+          profile: profile === 'car' ? 'driving' : profile === 'bike' ? 'cycling' : 'walking',
         }),
         waypoints: [start, end],
         routeWhileDragging: true,
@@ -66,7 +75,7 @@ export default function RoutingControl({ start, end }: RoutingControlProps) {
         controlRef.current = null;
       }
     };
-  }, [map, start, end]);
+  }, [map, start, end, profile]);
 
   return null;
 }
