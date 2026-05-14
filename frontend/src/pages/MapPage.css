@@ -1,15 +1,17 @@
 .map-page-container {
-  position: relative;
-  width: 100vw;
-  height: 200vh;
-  overflow: hidden;
+  /*position: relative;*/
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 100vh;
 }
 
 .map-wrapper {
-  position: absolute;
-  top: 30px;
-  left: 30px;
-  right: 30px;
+  position: relative;
+  margin: 30px;
   height: calc(100vh - 60px);
   border: 3px solid #9ca3af;
   border-radius: 16px;
@@ -154,9 +156,9 @@
   top: 0;
   right: -350px; 
   width: 300px;
-  height: 100vh;
+  height: 100%;
   background: white;
-  z-index: 1100;
+  z-index: 1200; /* Increased to cover floating UI (which is 1000) */
   box-shadow: -5px 0 25px rgba(0,0,0,0.1);
   transition: right 0.3s ease-in-out;
   padding: 20px;

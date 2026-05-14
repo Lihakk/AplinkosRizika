@@ -48,6 +48,14 @@ interface SelectedPlace {
 }
 
 // --- Config & Constants ---
+const safeJsonParse = (data: any) => {
+  if (!data) return null;
+  if (typeof data === "string") {
+    try { return JSON.parse(data); }
+    catch { return null; }
+  }
+  return data;
+};
 const API_URL = import.meta.env.VITE_API_URL || "http://144.24.247.126:5178";
 const customIcon = new Icon({ 
   iconUrl: "./icons/placeholder.png", 
@@ -223,8 +231,22 @@ export default function MapPage() {
   const [routeEnd, setRouteEnd] = useState<LatLng | null>(null);
   const [destQuery, setDestQuery] = useState("");
   const [pickingDest, setPickingDest] = useState(false);
+  const [routeProfile, setRouteProfile] = useState<'car' | 'bike' | 'foot'>('car');
 
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
+
+  // COMPARISON AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  const [isComparing, setIsComparing] = useState(false);
+  const [place1Analysis, setPlace1Analysis] = useState<any>(null);
+  const [place2Analysis, setPlace2Analysis] = useState<any>(null);
+  const [place1WalkScore, setPlace1WalkScore] = useState<number | null>(null);
+  const [place2WalkScore, setPlace2WalkScore] = useState<number | null>(null);
+  const [place1CrimeScore, setPlace1CrimeScore] = useState<number | null>(null);
+  const [place2CrimeScore, setPlace2CrimeScore] = useState<number | null>(null);
+  const [compQuery1, setCompQuery1] = useState("");
+  const [compQuery2, setCompQuery2] = useState("");
+  const [compPlace1, setCompPlace1] = useState<SelectedPlace | null>(null);
+  const [compPlace2, setCompPlace2] = useState<SelectedPlace | null>(null);
 
   const [schools, setSchools] = useState<any[]>([]);
   const [police, setPolice] = useState<any[]>([]);
@@ -345,7 +367,7 @@ export default function MapPage() {
       
       const parsedData = data.map((item: any) => ({
         ...item,
-        geometry: JSON.parse(item.geometry)
+        geometry: safeJsonParse(item.geometry)
       }));
 
       setFeatureLayers(p => ({ ...p, [endpoint]: parsedData }));
@@ -362,7 +384,7 @@ export default function MapPage() {
       const res = await fetch(`${API_URL}/api/Transport/nearby-stops?lat=${lat}&lon=${lng}`);
       const data = await res.json();
       setBusStops(data.map((stop: any) => {
-        const geo = JSON.parse(stop.geometry);
+        const geo = safeJsonParse(stop.geometry);
         return { id: stop.id, lat: geo.coordinates[1], lon: geo.coordinates[0], name: stop.name || "Stotelė" };
       }));
     } catch (e) { console.error(e); }
@@ -374,13 +396,16 @@ export default function MapPage() {
     setStopRoutes([]);
     try {
       const arrRes = await fetch(`${API_URL}/api/Transport/stop-arrivals?lat=${lat}&lon=${lon}`);
-      setStopArrivals(await arrRes.json());
+      const arrData = await arrRes.json();
+      setStopArrivals(Array.isArray(arrData) ? arrData : []);
       
       const routeRes = await fetch(`${API_URL}/api/Transport/stop-routes?lat=${lat}&lon=${lon}`);
-      setStopRoutes(await routeRes.json());
+      const routeData = await routeRes.json();
+      setStopRoutes(Array.isArray(routeData) ? routeData : []);
       
       const freqRes = await fetch(`${API_URL}/api/Transport/stop-frequency?lat=${lat}&lon=${lon}`);
-      setStopFrequency(await freqRes.json());
+      const freqData = await freqRes.json();
+      setStopFrequency(Array.isArray(freqData) ? freqData : []);
     } catch (e) { 
       console.error(e); 
     } finally { 
@@ -395,7 +420,7 @@ export default function MapPage() {
       const res = await fetch(`${API_URL}/api/Transport/route-path/${shapeId}`);
       const data = await res.json();
       if (data.geometry) {
-        setSelectedPath(JSON.parse(data.geometry)); 
+        setSelectedPath(safeJsonParse(data.geometry)); 
       }
     } catch (e) {
       console.error(e);
@@ -474,6 +499,65 @@ export default function MapPage() {
     setBusStops([]);
   };
 
+  //aaaaaaaaaaa comparison aaaaaaaaaaaaaa
+
+  const startComparison = async () => {
+    if (!compQuery1.trim() || !compQuery2.trim()) {
+      alert("Pasirinkite abu taškus palyginimui");
+      return;
+    } 
+    //setIsComparing(true);
+
+    try {
+      const [latlng1, latlng2] = await Promise.all([
+        geocode(compQuery1),
+        geocode(compQuery2)
+      ]);
+
+      if (!latlng1 || !latlng2) {
+        alert("Nepavyko rasti vieno ar abiejų vietų. Įsitikinkite, kad įvedėte teisingus adresus.");
+        return;
+      }
+
+      setCompPlace1({ latlng: latlng1, name: compQuery1 });
+      setCompPlace2({ latlng: latlng2, name: compQuery2 });
+
+      setIsComparing(true);
+
+      const [res1, res2] = await Promise.all([
+          fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng1.lat}&lon=${latlng1.lng}`),
+          fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng2.lat}&lon=${latlng2.lng}`)
+        ]);
+
+      if (res1.ok) setPlace1Analysis(await res1.json());
+      if (res2.ok) setPlace2Analysis(await res2.json());
+
+      const calculateCrime = (lat: number, lng: number) => {
+        if (processedCrimeData.length === 0) return null;
+        const match = processedCrimeData.find((e) => {
+          try { return geometryContains(safeJsonParse(e.geometry || e.Geometry), lng, lat); }
+          catch { return false; }
+        });
+        if (!match) return null;
+        return Math.round(100 - (match.combined / maxValue) * 100);
+      };
+
+      setPlace1CrimeScore(calculateCrime(latlng1.lat, latlng1.lng));
+      setPlace2CrimeScore(calculateCrime(latlng2.lat, latlng2.lng));
+
+    } catch (e) {
+      console.error("Comparison fetch failed", e);
+      alert("Įvyko klaida lyginant vietas.");
+    }
+
+    setTimeout(() =>{
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 100);
+  };
+
   const toggleElderships = async () => {
     if (elderships.length > 0) return setElderships([]);
     setIsLoading(p => ({ ...p, elderships: true }));
@@ -489,7 +573,8 @@ export default function MapPage() {
     setIsLoading(p => ({ ...p, crimes: true }));
     try {
       const res = await fetch(`${API_URL}/api/Crimegrid/by-eldership`);
-      setCrimeByEldership(await res.json());
+      const data = await res.json();
+      setCrimeByEldership(Array.isArray(data) ? data : []);
     } catch (e) { console.error(e); }
     setIsLoading(p => ({ ...p, crimes: false }));
   };
@@ -504,7 +589,7 @@ export default function MapPage() {
         name: s.name,
         rating: s.rating,
         type: normalizeSchoolType(s.Type ?? s.type ?? s.Tipas ?? s.tipas),
-        location: JSON.parse(s.location)
+        location: safeJsonParse(s.location)
       }));
       setSchools(parsed);
     } catch (err) {
@@ -520,7 +605,7 @@ export default function MapPage() {
       const parsed = raw.map((p: any) => ({
         id: p.id,
         name: p.name,
-        geo: JSON.parse(p.point)
+        geo: safeJsonParse(p.point)
       }));
       setPolice(parsed);
       return parsed;
@@ -579,7 +664,7 @@ export default function MapPage() {
     if (!selectedPlace || processedCrimeData.length === 0) return null;
     const { lat, lng } = selectedPlace.latlng;
     const match = processedCrimeData.find((e) => {
-      try { return geometryContains(JSON.parse(e.geometry), lng, lat); }
+      try { return geometryContains(safeJsonParse(e.geometry || e.Geometry), lng, lat); }
       catch { return false; }
     });
     if (!match) return null;
@@ -593,8 +678,13 @@ export default function MapPage() {
     return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
   }, [walkScoreValue, accessibilityData, crimeSafetyScore]);
 
+
+
   return (
     <div className={`map-page-container ${pickingDest ? "map-picking-dest" : ""}`}>
+
+      {/* MAP */}
+      <div className="map-wrapper">
 
       {/* LEFT UI: Navigation & Search */}
       <div className="floating-ui top-left">
@@ -615,9 +705,30 @@ export default function MapPage() {
               <Crosshair size={18} />
             </button>
             {routeStart && <button className="clear-route-btn" onClick={clearRoute}><X size={14} /></button>}
+
           </div>
+          
         )}
+
+        <div className="glass-panel profile-selector">
+          <button 
+            className={`profile-btn ${routeProfile === 'car' ? 'active' : ''}`} 
+            onClick={() => setRouteProfile('car')}
+            title="Automobilis"
+          >Automobilis</button>
+          <button 
+            className={`profile-btn ${routeProfile === 'bike' ? 'active' : ''}`} 
+            onClick={() => setRouteProfile('bike')}
+            title="Dviratis"
+          >Dviratis</button>
+          <button 
+            className={`profile-btn ${routeProfile === 'foot' ? 'active' : ''}`} 
+            onClick={() => setRouteProfile('foot')}
+            title="Pėsčiomis"
+          >Pėsčiomis</button>
+        </div>
       </div>
+      
 
       {/* RIGHT UI: Layer Controls */}
       <div className="floating-ui top-right">
@@ -693,9 +804,7 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* MAP */}
-      <div className="map-wrapper">
-        <MapContainer
+      <MapContainer
           center={cityCenter}
           zoom={12}
           zoomControl={false}
@@ -712,7 +821,7 @@ export default function MapPage() {
           />
           <CityViewController center={cityCenter} />
 
-          <RoutingControl start={routeStart} end={routeEnd} />
+          <RoutingControl start={routeStart} end={routeEnd} profile={routeProfile} />
 
           <LocationMarker
             customIcon={customIcon}
@@ -727,7 +836,7 @@ export default function MapPage() {
           {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
 
           {elderships.map((e, i) => (
-            <GeoJSON key={`eldership-${i}`} data={JSON.parse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }}
+            <GeoJSON key={`eldership-${i}`} data={safeJsonParse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }}
             onEachFeature={(_, layer) =>
                 layer.bindPopup(
                   `<strong>${e.eldership_Name}</strong>`
@@ -737,7 +846,7 @@ export default function MapPage() {
           {processedCrimeData.map((e, i) => (
             <GeoJSON
               key={`crime-${i}`}
-              data={JSON.parse(e.Geometry)}
+              data={safeJsonParse(e.Geometry)}
               style={{
                 fillColor: getCrimeColor(e.combined / maxValue),
                 color: "white",
@@ -887,16 +996,8 @@ export default function MapPage() {
             clearTarget={() => setSearchTarget(null)}
           />
         </MapContainer>
-      </div>
 
-      {/* Path Clear Button */}
-      {selectedPath && (
-        <button className="clear-path-btn" onClick={() => setSelectedPath(null)}>
-          <X size={16} /> Valyti maršrutą
-        </button>
-      )}
-
-      {/* SIDE PANEL */}
+        {/* SIDE PANEL */}
       <div className={`side-panel ${panelOpen ? "open" : ""}`}>
         <button className="panel-close-btn" onClick={() => setPanelOpen(false)}>
           ✕
@@ -1019,6 +1120,179 @@ export default function MapPage() {
           )}
         </div>
       </div>
+      </div>
+
+      {/* Path Clear Button */}
+      {selectedPath && (
+        <button className="clear-path-btn" onClick={() => setSelectedPath(null)}>
+          <X size={16} /> Valyti maršrutą
+        </button>
+      )}
+
+      
+
+              {/* --- COMPARISON DASHBOARD --- */}
+        <div className="comparison-dashboard" style={{ padding: '60px 40px', background: '#f1f5f9', borderTop: '2px solid#cbd5e1' }}>
+           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+             <h2 style={{ fontSize: '2rem', color: '#1e293b' }}>Veiklos Analizė</h2>
+             <p style={{ color: '#64748b' }}>Palyginkite dvi vietas pagal pasiekiamumą ir saugumą</p>
+           </div>
+    
+          {/* Search & Action Row */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginBottom: '60px' }}>
+            
+            <div className="glass-panel search-box" style={{ width: '300px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+              <input 
+                type="text" 
+                placeholder="Pirmo adreso paieška..." 
+                value={compQuery1} 
+                onChange={(e) => setCompQuery1(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && startComparison()}
+                style={{ width: '100%', padding: '4px' }}
+              />
+            </div>
+  
+            <div style={{ fontSize: '24px', fontWeight: '900', color: '#cbd5e1' }}>VS</div>
+  
+            <div className="glass-panel search-box" style={{ width: '300px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+              <input 
+                type="text" 
+                placeholder="Antro adreso paieška..." 
+                value={compQuery2} 
+                onChange={(e) => setCompQuery2(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && startComparison()}
+                style={{ width: '100%', padding: '4px' }}
+              />
+            </div>
+  
+            <button 
+              className="glass-btn" 
+              onClick={startComparison}
+              disabled={!compQuery1.trim() || !compQuery2.trim()}
+              style={{ 
+                background: (!compQuery1.trim() || !compQuery2.trim()) ? '#cbd5e1' : '#3b82f6', 
+                color: 'white', 
+                padding: '14px 28px',
+                fontSize: '1rem',
+                boxShadow: '0 10px 15px -3px rgb(59 130 246 / 0.3)'
+              }}
+            >
+              📊 Palyginti
+            </button>
+          </div>
+   
+          {/* Hidden WalkScore fetchers */}
+          {isComparing && compPlace1 && (
+            <div style={{ display: 'none' }}>
+              <WalkScore latlng={compPlace1.latlng} onScore={setPlace1WalkScore} />
+            </div>
+          )}
+          {isComparing && compPlace2 && (
+            <div style={{ display: 'none' }}>
+              <WalkScore latlng={compPlace2.latlng} onScore={setPlace2WalkScore} />
+            </div>
+          )}
+
+          {/* Result Columns */}
+          {isComparing && (
+            <div style={{ display: 'flex', gap: '30px', maxWidth: '1200px', margin: '0 auto' }}>
+              {/* Column 1 */}
+              <div className="glass-panel" style={{ flex: 1, borderTop: '4px solid #3b82f6' }}>
+                <h3 style={{ fontSize: '1.4rem', marginBottom: '20px' }}>{compPlace1?.name}</h3>
+                
+                {/* --- THE BIG SUMMARY SCORES --- */}
+                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                  <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Pasiekiamumas</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3b82f6' }}>{place1Analysis?.totalScore || 0}</div>
+                  </div>
+                  
+                  <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Saugumas</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: place1CrimeScore && place1CrimeScore > 50 ? '#10b981' : '#ef4444' }}>
+                      {place1CrimeScore !== null ? place1CrimeScore : 'N/A'}
+                    </div>
+                  </div>
+              
+                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: '#1e40af', textTransform: 'uppercase', fontWeight: 'bold' }}>Gyvenimo Kokybė</div>
+                    <div style={{ fontSize: '28px', fontWeight: '900', color: '#1d4ed8' }}>
+                      {Math.round(((place1Analysis?.totalScore || 0) + (place1WalkScore || 0) + (place1CrimeScore || 0)) / 3) || 0}
+                    </div>
+                  </div>
+                </div>
+
+                {place1Analysis && (
+                  <div className="analysis-results">
+                    <ul style={{ listStyle: 'none', padding: 0 }}>
+                      {place1Analysis.features.map((f: any, i: number) => (
+                        <li key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '20px' }}>{f.icon}</span>
+                            <span>{f.type}</span>
+                          </span>
+                          <span style={{ fontWeight: 'bold', color: '#64748b' }}>
+                            {f.distance < 1000 ? `${Math.round(f.distance)} m` : `${(f.distance / 1000).toFixed(1)} km`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Column 2 */}
+              <div className="glass-panel" style={{ flex: 1, borderTop: '4px solid #ef4444'  }}>
+                <h3 style={{ fontSize: '1.4rem', marginBottom: '20px' }}>{compPlace2?.name}</h3>
+                
+                {/* --- THE BIG SUMMARY SCORES --- */}
+                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                  <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Pasiekiamumas</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>{place2Analysis?.totalScore || 0}</div>
+                  </div>
+                  
+                  <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Saugumas</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: place2CrimeScore && place2CrimeScore > 50 ? '#10b981' : '#ef4444' }}>
+                      {place2CrimeScore !== null ? place2CrimeScore : 'N/A'}
+                    </div>
+                  </div>
+              
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: '12px', color: '#b91c1c', textTransform: 'uppercase', fontWeight: 'bold' }}>Gyvenimo Kokybė</div>
+                    <div style={{ fontSize: '28px', fontWeight: '900', color: '#b91c1c' }}>
+                      {Math.round(((place2Analysis?.totalScore || 0) + (place2WalkScore || 0) + (place2CrimeScore || 0)) / 3) || 0}
+                    </div>
+                  </div>
+                </div>
+
+                {place2Analysis && (
+                  <div className="analysis-results">
+                    <ul style={{ listStyle: 'none', padding: 0 }}>
+                      {place2Analysis.features.map((f: any, i: number) => (
+                        <li key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '20px' }}>{f.icon}</span>
+                            <span>{f.type}</span>
+                          </span>
+                          <span style={{ fontWeight: 'bold', color: '#64748b' }}>
+                            {f.distance < 1000 ? `${Math.round(f.distance)} m` : `${(f.distance / 1000).toFixed(1)} km`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+    </div>
+
+
+
     </div>
   );
 }
+
+
