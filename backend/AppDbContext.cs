@@ -36,21 +36,19 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.Grid_id).HasColumnName("grid_id");
-            entity.Property(e => e.Eldership_id).HasColumnName("eldership_id");
-            entity.Property(e => e.Asm_2022).HasColumnName("asm_2022");
-            entity.Property(e => e.Trv_2022).HasColumnName("trv_2022");
-            entity.Property(e => e.Vtp_2022).HasColumnName("vtp_2022");
-            entity.Property(e => e.Esm_2022).HasColumnName("esm_2022");
-            entity.Property(e => e.Kit_2022).HasColumnName("kit_2022");
-            entity.Property(e => e.Population_2020).HasColumnName("population_2020");
+            entity.Property(e => e.City_id).HasColumnName("city_id");
+            entity.Property(e => e.Year).HasColumnName("year");
+            entity.Property(e => e.Health).HasColumnName("crimes_health");
+            entity.Property(e => e.Theft).HasColumnName("crimes_theft");
+            entity.Property(e => e.Total).HasColumnName("crimes_total_recalculated");
+
             entity.Property(e => e.Geometry).HasColumnName("geometry");
         });
 
         modelBuilder.Entity<CrimeByEldership>(entity =>
         {
             entity.HasNoKey();
-            entity.ToView(null); // tells EF this is not a real table/view
+            entity.ToView(null); 
         });
 
         modelBuilder.Entity<School>(entity =>
