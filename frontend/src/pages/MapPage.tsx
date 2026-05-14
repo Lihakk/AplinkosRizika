@@ -14,7 +14,7 @@ import WalkScore from "../components/WalkScore";
 import { geocode } from "../utils/geocoding";
 
 // --- Types ---
-type CrimeKey = "asm" | "trv" | "nar";
+type CrimeKey = "hp" | "th";
 
 const SCHOOL_TYPES = ["pradine", "progimnazija", "gimnazija"] as const;
 
@@ -73,16 +73,41 @@ const busIcon = divIcon({
 
 const cityCoordinates: Record<string, [number, number]> = {
   "Kaunas": [54.8985, 23.9036],
-  "Vilnius": [54.6872, 25.2797],
-  "Klaipėda": [55.7033, 21.1443],
-  "Šiauliai": [55.9349, 23.3137],
-  "Panevėžys": [55.7348, 24.3575]
+  "Vilnius": [54.6872, 25.2797]
+  //"Klaipėda": [55.7033, 21.1443],
+  //"Šiauliai": [55.9349, 23.3137],
+  //"Panevėžys": [55.7348, 24.3575]
 };
 
-const cityBounds = new LatLngBounds(
-  [54.80450402603192, 23.741060247315946],  // south-west
-  [55.00378796631874, 24.102934157560853],  // north-east
-);
+const expandBounds = (bounds: LatLngBounds, factor: number) => {
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  const centerLat = (sw.lat + ne.lat) / 2;
+  const centerLng = (sw.lng + ne.lng) / 2;
+  const latHalf = (ne.lat - sw.lat) * factor / 2;
+  const lngHalf = (ne.lng - sw.lng) * factor / 2;
+  return new LatLngBounds(
+    [centerLat - latHalf, centerLng - lngHalf],
+    [centerLat + latHalf, centerLng + lngHalf]
+  );
+};
+
+const cityBoundsMap: Record<string, LatLngBounds> = {
+  Kaunas: expandBounds(
+    new LatLngBounds(
+      [54.80450402603192, 23.741060247315946],
+      [55.00378796631874, 24.102934157560853]
+    ),
+    1.5
+  ),
+  Vilnius: expandBounds(
+    new LatLngBounds(
+      [54.6000, 24.8500],
+      [54.8200, 25.4500]
+    ),
+    1.5
+  )
+};
 
 const schoolIcon = divIcon({
   html: '<div style="font-size: 22px;">🏫</div>',
@@ -213,8 +238,10 @@ function findClosestPolice(userPos: L.LatLng, policeList: any[]) {
 export default function MapPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const city = params.get("city") ?? "Kaunas";
-  const cityCenter = cityCoordinates[city] || cityCoordinates["Kaunas"];
+  const rawCity = params.get("city")?.trim() || "Kaunas";
+  const city = cityCoordinates[rawCity] ? rawCity : "Kaunas";
+  const cityCenter = cityCoordinates[city];
+  const cityBounds = cityBoundsMap[city] || cityBoundsMap["Kaunas"];
   
   // --- Map reference ---
   const mapRef = useRef<L.Map | null>(null);
@@ -235,7 +262,7 @@ export default function MapPage() {
 
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
-  // COMPARISON AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  // COMPARISON AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA lol
   const [isComparing, setIsComparing] = useState(false);
   const [place1Analysis, setPlace1Analysis] = useState<any>(null);
   const [place2Analysis, setPlace2Analysis] = useState<any>(null);
@@ -260,7 +287,7 @@ export default function MapPage() {
   const [selectedPath, setSelectedPath] = useState<any>(null);
   const [loadingArrivals, setLoadingArrivals] = useState(false);
   const [selectedCrimes, setSelectedCrimes] = useState<Record<CrimeKey, boolean>>({
-    asm: true, trv: true, nar: true,
+    hp: true, th: true,
   });
   const [selectedSchoolTypes, setSelectedSchoolTypes] = useState<Record<SchoolType, boolean>>({
     pradine: true,
@@ -338,15 +365,6 @@ export default function MapPage() {
     fetchEvaluation();
   }, [selectedPlace]);
 
-  useEffect(() => {
-    if (!selectedPlace || crimeByEldership.length > 0) return;
-    (async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/Crimegrid/by-eldership`);
-        setCrimeByEldership(await res.json());
-      } catch (e) { console.error(e); }
-    })();
-  }, [selectedPlace]);
   // --- Handlers ---
 
   const toggleNewFeature = async (endpoint: string) => {
@@ -574,10 +592,24 @@ export default function MapPage() {
     try {
       const res = await fetch(`${API_URL}/api/Crimegrid/by-eldership`);
       const data = await res.json();
-      setCrimeByEldership(Array.isArray(data) ? data : []);
+      const normalized = Array.isArray(data) ? data.map((item: any) => {
+        const geometry = safeJsonParse(item.Geometry ?? item.geometry);
+        return {
+          eldership_Id: item.Eldership_Id ?? item.eldership_Id ?? item.eldership_id,
+          eldership_Name: item.Eldership_Name ?? item.eldership_Name ?? item.eldership_name ?? item.name ?? "",
+          City_id: item.City_id ?? item.city_Id ?? item.cityId ?? item.city_id,
+          Health_total: Number(item.Health ?? item.health_Total ?? item.Health_Total ?? item.Health_total ?? item.health_total ?? 0),
+          Theft_total: Number(item.Theft ?? item.theft_Total ?? item.Theft_Total ?? item.Theft_total ?? item.theft_total ?? 0),
+          All_total: Number(item.Total ?? item.all_Total ?? item.All_Total ?? item.All_total ?? item.all_total ?? 0),
+          geometry,
+          Geometry: geometry,
+        };
+      }) : [];
+      setCrimeByEldership(normalized);
     } catch (e) { console.error(e); }
     setIsLoading(p => ({ ...p, crimes: false }));
   };
+
 
   const toggleSchools = async () => {
     if (schools.length > 0) return setSchools([]);
@@ -619,7 +651,7 @@ export default function MapPage() {
   const processedCrimeData = useMemo(() => {
     return crimeByEldership.map((e) => ({
       ...e,
-      combined: (selectedCrimes.asm ? e.asm_Total : 0) + (selectedCrimes.trv ? e.trv_Total : 0) + (selectedCrimes.nar ? e.vtp_Total : 0)
+      combined: (selectedCrimes.hp ? e.Health_total : 0) + (selectedCrimes.th ? e.Theft_total : 0)
     }));
   }, [crimeByEldership, selectedCrimes]);
 
@@ -635,7 +667,7 @@ export default function MapPage() {
   }, [schools, selectedSchoolTypes, minSchoolRating]);
   // Calculate crime total based on selected crime types
   const calculateCrimeTotal = (eldership: any) => {
-    return (selectedCrimes.asm ? eldership.asm_Total : 0) + (selectedCrimes.trv ? eldership.trv_Total : 0) + (selectedCrimes.nar ? eldership.vtp_Total : 0);
+    return (selectedCrimes.hp ? eldership.Health_total : 0) + (selectedCrimes.th ? eldership.Theft_total : 0);
   };
 
   // Open popup on the clicked layer with dynamic content based on selected crimes
@@ -767,9 +799,8 @@ export default function MapPage() {
           {crimeByEldership.length > 0 && (
             <div className="crime-filters">
               <hr />
-              <label><input type="checkbox" checked={selectedCrimes.asm} onChange={() => setSelectedCrimes(p => ({ ...p, asm: !p.asm }))} /> Asmens</label>
-              <label><input type="checkbox" checked={selectedCrimes.trv} onChange={() => setSelectedCrimes(p => ({ ...p, trv: !p.trv }))} /> Turtas</label>
-              <label><input type="checkbox" checked={selectedCrimes.nar} onChange={() => setSelectedCrimes(p => ({ ...p, nar: !p.nar }))} /> Narkotikai</label>
+              <label><input type="checkbox" checked={selectedCrimes.hp} onChange={() => setSelectedCrimes(p => ({ ...p, hp: !p.hp }))} /> Sveikata</label>
+              <label><input type="checkbox" checked={selectedCrimes.th} onChange={() => setSelectedCrimes(p => ({ ...p, th: !p.th }))} /> Vagystės</label>
             </div>
           )}
 
@@ -805,6 +836,7 @@ export default function MapPage() {
       </div>
 
       <MapContainer
+          key={city}
           center={cityCenter}
           zoom={12}
           zoomControl={false}
@@ -812,7 +844,7 @@ export default function MapPage() {
           className="full-screen-map"
           maxBounds={cityBounds}
           maxBoundsViscosity={1.0}
-          minZoom={12}
+          minZoom={10}
           ref={mapRef}
         >
           <TileLayer
@@ -846,16 +878,24 @@ export default function MapPage() {
           {processedCrimeData.map((e, i) => (
             <GeoJSON
               key={`crime-${i}`}
-              data={safeJsonParse(e.Geometry)}
+              data={safeJsonParse(e.geometry || e.Geometry)}
               style={{
                 fillColor: getCrimeColor(e.combined / maxValue),
-                color: "white",
-                weight: 1,
-                fillOpacity: 0.6
+                color: "#333",
+                weight: 1.5,
+                opacity: 0.8,
+                fillOpacity: 0.55
               }}
               onEachFeature={(_, layer) => {
+                const popupContent = `
+                  <div>
+                    <strong>${e.eldership_Name}</strong>
+                    <br />
+                    Nusikaltimai: <strong>${calculateCrimeTotal(e)}</strong>
+                  </div>
+                `;
+                layer.bindPopup(popupContent);
                 layer.on('click', () => {
-                  // Store layer reference and selected crime data
                   crimeLayerRef.current = layer;
                   setSelectedCrimeEldership(e);
                 });

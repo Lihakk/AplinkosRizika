@@ -21,27 +21,21 @@ public class CrimegridController : ControllerBase
         .FromSqlRaw(@"
             SELECT 
                 ""id"",
-                ""grid_id"",
-                ""eldership_id"",
-                ""asm_2022"",
-                ""trv_2022"",
-                ""vtp_2022"",
-                ""esm_2022"",
-                ""kit_2022"",
-                ""population_2020"",
+                ""year"",
+                ""city_id"",
+                ""crimes_health"",
+                ""crimes_theft"",
+                ""crimes_total_recalculated"",
                 ST_AsGeoJSON(ST_Transform(""geometry"", 4326)) AS ""geometry""
-            FROM ""crime_grid""
+            FROM ""crime_grid100""
         ")
         .Select(e => new {
             e.Id,
-            e.Grid_id,
-            e.Eldership_id,
-            e.Asm_2022,
-            e.Trv_2022,
-            e.Vtp_2022,
-            e.Esm_2022,
-            e.Kit_2022,
-            e.Population_2020,
+            e.Year,
+            e.City_id,
+            e.Health,
+            e.Theft,
+            e.Total,
             e.Geometry 
         })
         .ToListAsync();
@@ -57,16 +51,24 @@ public class CrimegridController : ControllerBase
                 SELECT 
                     e.""eldership_id"" AS ""Eldership_Id"",
                     e.""eldership_name"" AS ""Eldership_Name"",
-                    COALESCE(SUM(c.""asm_2022""), 0) AS ""Asm_Total"",
-                    COALESCE(SUM(c.""trv_2022""), 0) AS ""Trv_Total"",
-                    COALESCE(SUM(c.""vtp_2022""), 0) AS ""Vtp_Total"",
-                    COALESCE(SUM(c.""esm_2022""), 0) AS ""Esm_Total"",
-                    COALESCE(SUM(c.""kit_2022""), 0) AS ""Kit_Total"",
-                    COALESCE(SUM(c.""population_2020""), 0) AS ""Population_Total"",
-                    ST_AsGeoJSON(ST_Transform(e.""geometry"", 4326))::json AS ""Geometry""
+                    COALESCE(SUM(c.""crimes_health""), 0) AS ""Health_Total"",
+                    COALESCE(SUM(c.""crimes_theft""), 0) AS ""Theft_Total"",
+                    COALESCE(SUM(c.""crimes_total_recalculated""), 0) AS ""All_Total"",
+                    ST_AsGeoJSON(ST_Transform(e.""geometry"", 4326))::json AS ""Geometry"",
+                    e.""city_id"" AS ""City_id""
+
                 FROM ""elderships"" e
-                LEFT JOIN ""crime_grid"" c
-                    ON ST_Intersects(e.""geometry"", c.""geometry"")
+
+                LEFT JOIN ""grid_cells_100"" g
+                    ON ST_Intersects(e.""geometry"", g.""geometry"")
+                    AND e.""city_id"" = g.""city_id""
+
+                LEFT JOIN ""crime_grid100"" c
+                    ON c.""id"" = g.""id""
+
+                WHERE c.""period"" = 'M'
+                AND c.""year"" = 2025
+
                 GROUP BY e.""eldership_id"", e.""eldership_name"", e.""geometry""
             ")
             .ToListAsync();

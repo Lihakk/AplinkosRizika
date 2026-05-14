@@ -3,11 +3,16 @@ import { Link } from "react-router-dom";
 import { MapPin, Search } from "lucide-react";
 import "./CitySelect.css";
 
-
+/*
 const allCities = [
   "Alytus", "Ariogala", "Jonava", "Jurbarkas", "Kaunas", 
   "Kėdainiai", "Klaipėda", "Marijampolė", "Mažeikiai", "Panevėžys", 
   "Raseiniai", "Šiauliai", "Tauragė", "Telšiai", "Vilnius", "Vilkaviškis"
+].sort();
+*/
+
+const allCities = [
+  "Kaunas", "Vilnius"
 ].sort();
 
 export default function CitySelect() {
