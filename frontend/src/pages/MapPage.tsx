@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, GeoJSON, useMap, Popup } from "react-leaflet";
 import { Icon, LatLng, LatLngBounds, divIcon } from "leaflet";
-import { Search, ArrowLeft, ShieldAlert, Map as MapIcon, X, School, Crosshair } from "lucide-react";
+import { Search, ArrowLeft, ShieldAlert, Map as MapIcon, X, School, Crosshair, ExternalLink } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import "./MapPage.css";
@@ -64,7 +64,7 @@ const customIcon = new Icon({
 });
 
 const busIcon = divIcon({
-  html: '<div style="font-size: 24px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">🚏</div>',
+  html: '<div style="font-size: 24px; text-shadow: 0 4px 10px rgba(0,0,0,0.2); filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.2));">🚏</div>',
   className: 'bus-stop-icon',
   iconSize: [24, 24],
   iconAnchor: [12, 24],
@@ -74,9 +74,6 @@ const busIcon = divIcon({
 const cityCoordinates: Record<string, [number, number]> = {
   "Kaunas": [54.8985, 23.9036],
   "Vilnius": [54.6872, 25.2797]
-  //"Klaipėda": [55.7033, 21.1443],
-  //"Šiauliai": [55.9349, 23.3137],
-  //"Panevėžys": [55.7348, 24.3575]
 };
 
 const expandBounds = (bounds: LatLngBounds, factor: number) => {
@@ -110,28 +107,29 @@ const cityBoundsMap: Record<string, LatLngBounds> = {
 };
 
 const schoolIcon = divIcon({
-  html: '<div style="font-size: 22px;">🏫</div>',
+  html: '<div style="font-size: 22px; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.2));">🏫</div>',
   className: 'school-icon',
   iconSize: [24, 24],
   iconAnchor: [12, 24],
 });
 
 const MAP_FEATURES = [
-  { id: 'health-facilities', label: '🏥 Ligoninės', icon: '🏥', color: '#ef4444' },
-  { id: 'parks', label: '🌳 Parkai', icon: '🌳', color: '#10b981' },
-  { id: 'playgrounds', label: '🛝 Aikštelės', icon: '🛝', color: '#f59e0b' },
-  { id: 'shops', label: '🛒 Parduotuvės', icon: '🛒', color: '#3b82f6' },
-  { id: 'gas-stations', label: '⛽ Degalinės', icon: '⛽', color: '#6366f1' },
-  { id: 'sports-clubs', label: '🏋️ Sporto klubai', icon: '🏋️', color: '#8b5cf6' }
+  { id: 'health-facilities', label: 'Ligoninės', icon: '🏥', color: '#ef4444' },
+  { id: 'parks', label: 'Parkai', icon: '🌳', color: '#10b981' },
+  { id: 'playgrounds', label: 'Aikštelės', icon: '🛝', color: '#f59e0b' },
+  { id: 'shops', label: 'Parduotuvės', icon: '🛒', color: '#3b82f6' },
+  { id: 'gas-stations', label: 'Degalinės', icon: '⛽', color: '#6366f1' },
+  { id: 'sports-clubs', label: 'Sporto klubai', icon: '🏋️', color: '#8b5cf6' },
+  { id: 'real-estate', label: '🏠 Skelbimai', icon: '🏠', color: '#10b981' }
 ];
-// Creates a beautiful circular marker with an emoji inside
+
 const createFeatureIcon = (emoji: string, color: string) => {
   return divIcon({
-    html: `<div style="background: ${color}; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.4); border: 2px solid white; font-size: 16px;">${emoji}</div>`,
+    html: `<div style="background: ${color}; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); border: 2.5px solid white; font-size: 18px; transition: transform 0.2s;">${emoji}</div>`,
     className: "custom-div-icon",
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -15]
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -17]
   });
 };
 
@@ -215,7 +213,6 @@ function CityViewController({ center }: { center: [number, number] }) {
   return null;
 }
 
-// --- PART 3: Find closest police ---
 function findClosestPolice(userPos: L.LatLng, policeList: any[]) {
   let closest = null;
   let minDist = Infinity;
@@ -223,15 +220,13 @@ function findClosestPolice(userPos: L.LatLng, policeList: any[]) {
   for (const p of policeList) {
     const [lng, lat] = p.geo.coordinates;
     const pos = L.latLng(lat, lng);
-
-    const dist = userPos.distanceTo(pos); // meters
+    const dist = userPos.distanceTo(pos);
 
     if (dist < minDist) {
       minDist = dist;
       closest = { ...p, distance: dist };
     }
   }
-
   return closest;
 }
 
@@ -243,17 +238,14 @@ export default function MapPage() {
   const cityCenter = cityCoordinates[city];
   const cityBounds = cityBoundsMap[city] || cityBoundsMap["Kaunas"];
   
-  // --- Map reference ---
   const mapRef = useRef<L.Map | null>(null);
 
-  // --- State ---
   const [searchTarget, setSearchTarget] = useState<LatLng | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState({ elderships: false, crimes: false, search: false });
   const [accessibilityData, setAccessibilityData] = useState<any>(null);
   const [loadingEval, setLoadingEval] = useState(false);
-  // Routing State
   const [routeStart, setRouteStart] = useState<LatLng | null>(null);
   const [routeEnd, setRouteEnd] = useState<LatLng | null>(null);
   const [destQuery, setDestQuery] = useState("");
@@ -262,7 +254,6 @@ export default function MapPage() {
 
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
-  // COMPARISON AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA lol
   const [isComparing, setIsComparing] = useState(false);
   const [place1Analysis, setPlace1Analysis] = useState<any>(null);
   const [place2Analysis, setPlace2Analysis] = useState<any>(null);
@@ -298,15 +289,12 @@ export default function MapPage() {
   const [stopFrequency, setStopFrequency] = useState<any[]>([]);
   const [walkScoreValue, setWalkScoreValue] = useState<number | null>(null);
 
-  // --- NEW STATE FOR ADDED FEATURES ---
   const [featureLayers, setFeatureLayers] = useState<Record<string, any[]>>({});
   const [activeFeatures, setActiveFeatures] = useState<Record<string, boolean>>({});
 
-  // --- CRIME ELDERSHIP POPUP STATE ---
   const [selectedCrimeEldership, setSelectedCrimeEldership] = useState<any>(null);
   const crimeLayerRef = useRef<any>(null);
 
-  // --- PART 4: Show closest police ---
   const hidePolice = () => {
     setClosestPolice(null);
     setShowingPolice(false);
@@ -314,7 +302,6 @@ export default function MapPage() {
 
   async function showClosestPolice(userPos: L.LatLng) {
     if (!mapRef.current) return;
-
     const policeData = police.length > 0 ? police : await loadPolice();
     if (!policeData || policeData.length === 0) return;
 
@@ -324,24 +311,16 @@ export default function MapPage() {
     const [lng, lat] = closest.geo.coordinates;
     const name = closest.name || "Policijos nuovada";
 
-    setClosestPolice({
-      latlng: L.latLng(lat, lng),
-      name,
-      distance: closest.distance,
-    });
+    setClosestPolice({ latlng: L.latLng(lat, lng), name, distance: closest.distance });
     setShowingPolice(true);
-
     mapRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
   }
 
   useEffect(() => {
     if (!showingPolice) return;
     const target = selectedPlace?.latlng ?? searchTarget;
-    if (target) {
-      showClosestPolice(target);
-    }
+    if (target) showClosestPolice(target);
   }, [selectedPlace, searchTarget, showingPolice]);
-
 
   useEffect(() => {
     const fetchEvaluation = async () => {
@@ -352,20 +331,15 @@ export default function MapPage() {
       setLoadingEval(true);
       try {
         const res = await fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${selectedPlace.latlng.lat}&lon=${selectedPlace.latlng.lng}`);
-        if (res.ok) {
-          setAccessibilityData(await res.json());
-        }
+        if (res.ok) setAccessibilityData(await res.json());
       } catch (e) {
         console.error("Evaluation failed", e);
       } finally {
         setLoadingEval(false);
       }
     };
-
     fetchEvaluation();
   }, [selectedPlace]);
-
-  // --- Handlers ---
 
   const toggleNewFeature = async (endpoint: string) => {
     if (activeFeatures[endpoint]) {
@@ -437,12 +411,8 @@ export default function MapPage() {
     try {
       const res = await fetch(`${API_URL}/api/Transport/route-path/${shapeId}`);
       const data = await res.json();
-      if (data.geometry) {
-        setSelectedPath(safeJsonParse(data.geometry)); 
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      if (data.geometry) setSelectedPath(safeJsonParse(data.geometry)); 
+    } catch (e) { console.error(e); }
   };
 
   const handleSearch = async () => {
@@ -455,11 +425,8 @@ export default function MapPage() {
         setPanelOpen(true);
         fetchNearbyBusStops(pos.lat, pos.lng);
       }
-    } catch (error) {
-      console.error(error);
-    } finally { 
-      setIsLoading(p => ({ ...p, search: false })); 
-    }
+    } catch (error) { console.error(error); } 
+    finally { setIsLoading(p => ({ ...p, search: false })); }
   };
 
   const handleRouteSearch = async () => {
@@ -473,11 +440,8 @@ export default function MapPage() {
         setRouteStart(start);
         setRouteEnd(end);
       }
-    } catch (error) {
-      console.error(error);
-    } finally { 
-      setIsLoading(p => ({ ...p, search: false })); 
-    }
+    } catch (error) { console.error(error); } 
+    finally { setIsLoading(p => ({ ...p, search: false })); }
   };
 
   const clearRoute = () => {
@@ -491,9 +455,7 @@ export default function MapPage() {
     setRouteEnd(latlng);
     setDestQuery(address);
     setPickingDest(false);
-    if (selectedPlace) {
-      setRouteStart(selectedPlace.latlng);
-    }
+    if (selectedPlace) setRouteStart(selectedPlace.latlng);
   };
 
   const handleDoubleClickResult = (latlng: LatLng, address: string) => {
@@ -517,14 +479,11 @@ export default function MapPage() {
     setBusStops([]);
   };
 
-  //aaaaaaaaaaa comparison aaaaaaaaaaaaaa
-
   const startComparison = async () => {
     if (!compQuery1.trim() || !compQuery2.trim()) {
       alert("Pasirinkite abu taškus palyginimui");
       return;
     } 
-    //setIsComparing(true);
 
     try {
       const [latlng1, latlng2] = await Promise.all([
@@ -569,10 +528,7 @@ export default function MapPage() {
     }
 
     setTimeout(() =>{
-      window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: 'smooth'
-      });
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }, 100);
   };
 
@@ -610,7 +566,6 @@ export default function MapPage() {
     setIsLoading(p => ({ ...p, crimes: false }));
   };
 
-
   const toggleSchools = async () => {
     if (schools.length > 0) return setSchools([]);
     try {
@@ -624,9 +579,7 @@ export default function MapPage() {
         location: safeJsonParse(s.location)
       }));
       setSchools(parsed);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const loadPolice = async () => {
@@ -647,7 +600,6 @@ export default function MapPage() {
     }
   };
 
-  // --- Computations ---
   const processedCrimeData = useMemo(() => {
     return crimeByEldership.map((e) => ({
       ...e,
@@ -665,24 +617,22 @@ export default function MapPage() {
       return type !== null && selectedSchoolTypes[type] && rating >= minSchoolRating;
     });
   }, [schools, selectedSchoolTypes, minSchoolRating]);
-  // Calculate crime total based on selected crime types
+  
   const calculateCrimeTotal = (eldership: any) => {
     return (selectedCrimes.hp ? eldership.Health_total : 0) + (selectedCrimes.th ? eldership.Theft_total : 0);
   };
 
-  // Open popup on the clicked layer with dynamic content based on selected crimes
   useEffect(() => {
     if (crimeLayerRef.current && selectedCrimeEldership) {
       const popupContent = `
-        <div>
-          <strong>${selectedCrimeEldership.eldership_Name}</strong>
+        <div style="font-family: 'Inter', sans-serif;">
+          <strong style="font-size:16px;">${selectedCrimeEldership.eldership_Name}</strong>
           <br />
-          Nusikaltimai: <strong>${calculateCrimeTotal(selectedCrimeEldership)}</strong>
+          <span style="color:#64748b; font-size:13px;">Nusikaltimai:</span> <strong style="color:#ef4444;">${calculateCrimeTotal(selectedCrimeEldership)}</strong>
         </div>
       `;
       crimeLayerRef.current.bindPopup(popupContent).openPopup();
       
-      // Close popup when it's closed
       const closeHandler = () => setSelectedCrimeEldership(null);
       crimeLayerRef.current.on('popupclose', closeHandler);
       
@@ -710,132 +660,105 @@ export default function MapPage() {
     return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
   }, [walkScoreValue, accessibilityData, crimeSafetyScore]);
 
-
-
   return (
     <div className={`map-page-container ${pickingDest ? "map-picking-dest" : ""}`}>
-
       {/* MAP */}
       <div className="map-wrapper">
 
-      {/* LEFT UI: Navigation & Search */}
-      <div className="floating-ui top-left">
-        <button className="glass-btn icon-btn" onClick={() => navigate(-1)}><ArrowLeft size={20} /> Atgal</button>
-        <div className="glass-panel search-box">
-          <input type="text" placeholder={`${city} adresas...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} />
-          <button onClick={handleSearch} disabled={isLoading.search}>{isLoading.search ? "..." : <Search size={18} />}</button>
-        </div>
-        {selectedPlace && (
-          <div className="glass-panel search-box">
-            <input type="text" placeholder="Tikslo adresas..." value={destQuery} onChange={(e) => setDestQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRouteSearch()} />
-            <button onClick={handleRouteSearch} disabled={isLoading.search}>{isLoading.search ? "..." : <Search size={18} />}</button>
-            <button
-              className={`pick-dest-btn ${pickingDest ? "active" : ""}`}
-              onClick={() => setPickingDest(p => !p)}
-              title="Pasirinkti tašką žemėlapyje"
-            >
-              <Crosshair size={18} />
-            </button>
-            {routeStart && <button className="clear-route-btn" onClick={clearRoute}><X size={14} /></button>}
-
-          </div>
-          
-        )}
-
-        <div className="glass-panel profile-selector">
-          <button 
-            className={`profile-btn ${routeProfile === 'car' ? 'active' : ''}`} 
-            onClick={() => setRouteProfile('car')}
-            title="Automobilis"
-          >Automobilis</button>
-          <button 
-            className={`profile-btn ${routeProfile === 'bike' ? 'active' : ''}`} 
-            onClick={() => setRouteProfile('bike')}
-            title="Dviratis"
-          >Dviratis</button>
-          <button 
-            className={`profile-btn ${routeProfile === 'foot' ? 'active' : ''}`} 
-            onClick={() => setRouteProfile('foot')}
-            title="Pėsčiomis"
-          >Pėsčiomis</button>
-        </div>
-      </div>
-      
-
-      {/* RIGHT UI: Layer Controls */}
-      <div className="floating-ui top-right">
-        <div className="glass-panel layer-controls">
-          <h3>Sluoksniai</h3>
-          <button className={`layer-btn ${elderships.length ? 'active' : ''}`} onClick={toggleElderships}><MapIcon size={16} /> Seniūnijos</button>
-          <button className={`layer-btn ${crimeByEldership.length ? 'active' : ''}`} onClick={toggleCrimes}><ShieldAlert size={16} /> Nusikalstamumas</button>
-          <button className={`layer-btn ${schools.length ? 'active' : ''}`} onClick={toggleSchools}><School size={16} /> Mokyklos</button>
-          <button className={`layer-btn ${showingPolice ? 'active' : ''}`} onClick={() => {
-              if (showingPolice) {
-                hidePolice();
-                return;
-              }
-
-              if (selectedPlace) showClosestPolice(selectedPlace.latlng);
-              else if (searchTarget) showClosestPolice(searchTarget);
-              else alert("Pasirinkite vietą žemėlapyje");
-            }}
-          >
-            {showingPolice ? '👮 Slėpti policiją' : '👮 Artimiausia policija'}
+        {/* LEFT UI: Navigation & Search */}
+        <div className="floating-ui top-left">
+          <button className="glass-btn" onClick={() => navigate(-1)}>
+            <ArrowLeft size={18} /> Atgal
           </button>
-
-          {/* --- NEW BUTTONS FOR YOUR JIRA TASKS --- */}
-          <hr style={{ margin: '10px 0', borderColor: 'rgba(0,0,0,0.1)' }} />
-          
-          {MAP_FEATURES.map(feature => (
-            <button 
-              key={feature.id}
-              className={`layer-btn ${activeFeatures[feature.id] ? 'active' : ''}`} 
-              onClick={() => toggleNewFeature(feature.id)}
-            >
-              {feature.label}
-            </button>
-          ))}
-
-          {crimeByEldership.length > 0 && (
-            <div className="crime-filters">
-              <hr />
-              <label><input type="checkbox" checked={selectedCrimes.hp} onChange={() => setSelectedCrimes(p => ({ ...p, hp: !p.hp }))} /> Sveikata</label>
-              <label><input type="checkbox" checked={selectedCrimes.th} onChange={() => setSelectedCrimes(p => ({ ...p, th: !p.th }))} /> Vagystės</label>
+          <div className="glass-panel search-box">
+            <input type="text" placeholder={`${city} adresas...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} />
+            <button onClick={handleSearch} disabled={isLoading.search}>{isLoading.search ? "..." : <Search size={18} />}</button>
+          </div>
+          {selectedPlace && (
+            <div className="glass-panel search-box">
+              <input type="text" placeholder="Tikslo adresas..." value={destQuery} onChange={(e) => setDestQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRouteSearch()} />
+              <button onClick={handleRouteSearch} disabled={isLoading.search}>{isLoading.search ? "..." : <Search size={18} />}</button>
+              <button
+                className={`pick-dest-btn ${pickingDest ? "active" : ""}`}
+                onClick={() => setPickingDest(p => !p)}
+                title="Pasirinkti tašką žemėlapyje"
+              >
+                <Crosshair size={18} />
+              </button>
+              {routeStart && <button className="clear-route-btn" onClick={clearRoute}><X size={14} /></button>}
             </div>
           )}
 
-          {schools.length > 0 && (
-            <div className="school-filters">
-              <hr />
-              <div className="school-filter-group">
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>Mokyklos tipas</div>
-                {SCHOOL_TYPES.map((type) => (
-                  <label key={type}>
-                    <input
-                      type="checkbox"
-                      checked={selectedSchoolTypes[type]}
-                      onChange={() => setSelectedSchoolTypes(p => ({ ...p, [type]: !p[type] }))}
-                    />
-                    {SCHOOL_TYPE_LABELS[type]}
-                  </label>
-                ))}
-              </div>
-              <div className="school-filter-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: 600 }}>Min. reitingas</span>
-                  <select value={minSchoolRating} onChange={(e) => setMinSchoolRating(Number(e.target.value))}>
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
-                      <option key={value} value={value}>{value}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </div>
-          )}
+          <div className="glass-panel profile-selector">
+            <button className={`profile-btn ${routeProfile === 'car' ? 'active' : ''}`} onClick={() => setRouteProfile('car')} title="Automobilis">🚗 Automobilis</button>
+            <button className={`profile-btn ${routeProfile === 'bike' ? 'active' : ''}`} onClick={() => setRouteProfile('bike')} title="Dviratis">🚲 Dviratis</button>
+            <button className={`profile-btn ${routeProfile === 'foot' ? 'active' : ''}`} onClick={() => setRouteProfile('foot')} title="Pėsčiomis">🚶‍♂️ Pėsčiomis</button>
+          </div>
         </div>
-      </div>
+      
+        {/* RIGHT UI: Layer Controls */}
+        <div className="floating-ui top-right">
+          <div className="glass-panel layer-controls">
+            <h3>Sluoksniai</h3>
+            <button className={`layer-btn ${elderships.length ? 'active' : ''}`} onClick={toggleElderships}><MapIcon size={18} /> Seniūnijos</button>
+            <button className={`layer-btn ${crimeByEldership.length ? 'active' : ''}`} onClick={toggleCrimes}><ShieldAlert size={18} /> Nusikalstamumas</button>
+            <button className={`layer-btn ${schools.length ? 'active' : ''}`} onClick={toggleSchools}><School size={18} /> Mokyklos</button>
+            <button className={`layer-btn ${showingPolice ? 'active' : ''}`} onClick={() => {
+                if (showingPolice) hidePolice();
+                else if (selectedPlace) showClosestPolice(selectedPlace.latlng);
+                else if (searchTarget) showClosestPolice(searchTarget);
+                else alert("Pasirinkite vietą žemėlapyje");
+              }}
+            >
+              👮 {showingPolice ? 'Slėpti policiją' : 'Artimiausia policija'}
+            </button>
 
-      <MapContainer
+            <hr style={{ margin: '16px 0', borderColor: '#e2e8f0', borderTop: '1px solid' }} />
+            
+            {MAP_FEATURES.map(feature => (
+              <button 
+                key={feature.id}
+                className={`layer-btn ${activeFeatures[feature.id] ? 'active' : ''}`} 
+                onClick={() => toggleNewFeature(feature.id)}
+              >
+                <span className="text-lg">{feature.icon}</span> {feature.label}
+              </button>
+            ))}
+
+            {crimeByEldership.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-200 text-sm flex flex-col gap-2">
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700 hover:text-slate-900"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={selectedCrimes.hp} onChange={() => setSelectedCrimes(p => ({ ...p, hp: !p.hp }))} /> Sveikata</label>
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700 hover:text-slate-900"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={selectedCrimes.th} onChange={() => setSelectedCrimes(p => ({ ...p, th: !p.th }))} /> Vagystės</label>
+              </div>
+            )}
+
+            {schools.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-200 text-sm">
+                <div className="flex flex-col gap-2 mb-4">
+                  <div className="font-semibold text-slate-900 mb-1">Mokyklos tipas</div>
+                  {SCHOOL_TYPES.map((type) => (
+                    <label key={type} className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900">
+                      <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={selectedSchoolTypes[type]} onChange={() => setSelectedSchoolTypes(p => ({ ...p, [type]: !p[type] }))} />
+                      {SCHOOL_TYPE_LABELS[type]}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center justify-between font-semibold text-slate-900">
+                    <span>Min. reitingas</span>
+                    <select className="bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5" value={minSchoolRating} onChange={(e) => setMinSchoolRating(Number(e.target.value))}>
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
+                        <option key={value} value={value}>{value}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <MapContainer
           key={city}
           center={cityCenter}
           zoom={12}
@@ -852,7 +775,6 @@ export default function MapPage() {
             attribution='&copy; OpenStreetMap contributors &copy; CARTO'
           />
           <CityViewController center={cityCenter} />
-
           <RoutingControl start={routeStart} end={routeEnd} profile={routeProfile} />
 
           <LocationMarker
@@ -868,61 +790,33 @@ export default function MapPage() {
           {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
 
           {elderships.map((e, i) => (
-            <GeoJSON key={`eldership-${i}`} data={safeJsonParse(e.geometry)} style={{ color: "#0077ff", weight: 2, fillOpacity: 0.05 }}
-            onEachFeature={(_, layer) =>
-                layer.bindPopup(
-                  `<strong>${e.eldership_Name}</strong>`
-                )}  />
+            <GeoJSON key={`eldership-${i}`} data={safeJsonParse(e.geometry)} style={{ color: "#3b82f6", weight: 2, fillOpacity: 0.03, dashArray: '5, 5' }}
+            onEachFeature={(_, layer) => layer.bindPopup(`<strong style="font-family:'Inter',sans-serif;font-size:15px;">${e.eldership_Name}</strong>`)}  />
           ))}
           
           {processedCrimeData.map((e, i) => (
             <GeoJSON
               key={`crime-${i}`}
               data={safeJsonParse(e.geometry || e.Geometry)}
-              style={{
-                fillColor: getCrimeColor(e.combined / maxValue),
-                color: "#333",
-                weight: 1.5,
-                opacity: 0.8,
-                fillOpacity: 0.55
-              }}
+              style={{ fillColor: getCrimeColor(e.combined / maxValue), color: "white", weight: 1.5, opacity: 0.9, fillOpacity: 0.6 }}
               onEachFeature={(_, layer) => {
-                const popupContent = `
-                  <div>
-                    <strong>${e.eldership_Name}</strong>
-                    <br />
-                    Nusikaltimai: <strong>${calculateCrimeTotal(e)}</strong>
-                  </div>
-                `;
-                layer.bindPopup(popupContent);
-                layer.on('click', () => {
-                  crimeLayerRef.current = layer;
-                  setSelectedCrimeEldership(e);
-                });
+                layer.on('click', () => { crimeLayerRef.current = layer; setSelectedCrimeEldership(e); });
               }}
             />
           ))}
 
           {MAP_FEATURES.map(config => {
             if (!activeFeatures[config.id] || !featureLayers[config.id]) return null;
-            
             return featureLayers[config.id].map((feature: any, i: number) => {
               const centerPoint = getFeatureCenter(feature.geometry);
               if (!centerPoint) return null;
-
               return (
-                <Marker 
-                  key={`${config.id}-${feature.id}-${i}`} 
-                  position={centerPoint}
-                  icon={createFeatureIcon(config.icon, config.color)}
-                >
+                <Marker key={`${config.id}-${feature.id}-${i}`} position={centerPoint} icon={createFeatureIcon(config.icon, config.color)}>
                   <Popup>
-                    <div style={{ textAlign: 'center' }}>
-                      <span style={{ fontSize: '24px' }}>{config.icon}</span>
-                      <h3 style={{ margin: '5px 0' }}>{feature.name || "Nežinomas objektas"}</h3>
-                      <p style={{ margin: '0', color: '#666', fontSize: '12px', textTransform: 'capitalize' }}>
-                        {feature.type || config.id}
-                      </p>
+                    <div style={{ textAlign: 'center', fontFamily: "'Inter', sans-serif", padding: '4px' }}>
+                      <span style={{ fontSize: '28px', display: 'block', marginBottom: '8px' }}>{config.icon}</span>
+                      <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', color: '#0f172a' }}>{feature.name || "Nežinomas objektas"}</h3>
+                      <p style={{ margin: '0', color: '#64748b', fontSize: '12px', textTransform: 'capitalize', fontWeight: 500 }}>{feature.type || config.id}</p>
                     </div>
                   </Popup>
                 </Marker>
@@ -930,96 +824,51 @@ export default function MapPage() {
             });
           })}
 
-          {/* 3. Schools */}
           {filteredSchools.map((s) => (
-            <Marker
-              key={s.school_Id}
-              position={[s.location.coordinates[1], s.location.coordinates[0]]}
-              icon={schoolIcon}
-            >
+            <Marker key={s.school_Id} position={[s.location.coordinates[1], s.location.coordinates[0]]} icon={schoolIcon}>
               <Popup>
-                <div style={{ fontWeight: 'bold', marginBottom: 6 }}>{s.name || "Mokykla"}</div>
-                <div style={{ fontSize: '13px', color: '#334155' }}>
-                  Tipas: <strong>{s.type ? SCHOOL_TYPE_LABELS[s.type as SchoolType] : 'Nežinomas'}</strong>
-                </div>
-                <div style={{ fontSize: '13px', color: '#334155' }}>
-                  Reitingas: <strong>{Number(s.rating).toFixed(1)}</strong>
+                <div style={{ fontFamily: "'Inter', sans-serif" }}>
+                  <div style={{ fontWeight: '800', fontSize: '14px', marginBottom: 8, color: '#0f172a' }}>{s.name || "Mokykla"}</div>
+                  <div style={{ fontSize: '13px', color: '#475569', marginBottom: 4 }}>Tipas: <strong style={{ color: '#0f172a' }}>{s.type ? SCHOOL_TYPE_LABELS[s.type as SchoolType] : 'Nežinomas'}</strong></div>
+                  <div style={{ fontSize: '13px', color: '#475569' }}>Reitingas: <strong style={{ color: '#3b82f6' }}>{Number(s.rating).toFixed(1)}</strong></div>
                 </div>
               </Popup>
             </Marker>
           ))}
 
           {closestPolice && (
-            <Marker
-              position={closestPolice.latlng}
-              icon={divIcon({
-                html: '<div style="font-size: 22px;">👮‍♂️</div>',
-                className: 'police-icon',
-                iconSize: [24, 24],
-                iconAnchor: [12, 24],
-              })}
-            >
-              <Popup>
-                <strong>{closestPolice.name}</strong><br />
-              </Popup>
+            <Marker position={closestPolice.latlng} icon={divIcon({ html: '<div style="font-size: 26px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));">👮‍♂️</div>', className: 'police-icon', iconSize: [28, 28], iconAnchor: [14, 28] })}>
+              <Popup><strong style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px' }}>{closestPolice.name}</strong></Popup>
             </Marker>
           )}
 
-          {/* 4. Bus Stops */}
           {busStops.map((stop) => (
-            <Marker
-              key={stop.id}
-              position={[stop.lat, stop.lon]}
-              icon={busIcon}
-              eventHandlers={{ click: () => handleStopClick(stop.lat, stop.lon) }}
-            >
+            <Marker key={stop.id} position={[stop.lat, stop.lon]} icon={busIcon} eventHandlers={{ click: () => handleStopClick(stop.lat, stop.lon) }}>
               <Popup>
-                <div className="bus-popup">
-                  <h3>{stop.name}</h3>
-
+                <div className="bus-popup" style={{ fontFamily: "'Inter', sans-serif" }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>{stop.name}</h3>
                   <div className="popup-section">
-                    <p className="section-title">🕒 Artimiausi atvykimai</p>
-                    {loadingArrivals ? (
-                      <p className="sub-text">Kraunama...</p>
-                    ) : stopArrivals.length > 0 ? (
-                      <ul className="arrival-list">
+                    <p className="text-xs font-bold uppercase text-slate-500 mb-2">🕒 Artimiausi atvykimai</p>
+                    {loadingArrivals ? <p className="text-sm text-slate-400 italic">Kraunama...</p> : stopArrivals.length > 0 ? (
+                      <ul className="flex flex-col gap-1 p-0 m-0 list-none">
                         {stopArrivals.map((a, idx) => (
-                          <li
-                            key={idx}
-                            className="arrival-item"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleShowPath(a.shapeId);
-                            }}
-                          >
-                            <span className="route-badge">{a.route}</span>
-                            <div className="arrival-info">
-                              <strong>{a.time.substring(0, 5)}</strong>
-                              <span className="destination-text">
-                                {a.destination}
-                              </span>
+                          <li key={idx} className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors" onClick={(e) => { e.stopPropagation(); handleShowPath(a.shapeId); }}>
+                            <span className="bg-blue-600 text-white font-bold text-xs py-1 px-2 rounded">{a.route}</span>
+                            <div className="flex flex-col">
+                              <strong className="text-slate-900 text-sm leading-tight">{a.time.substring(0, 5)}</strong>
+                              <span className="text-slate-500 text-xs leading-tight truncate max-w-[120px]">{a.destination}</span>
                             </div>
                           </li>
                         ))}
                       </ul>
-                    ) : (
-                      <p className="sub-text">Atvykimų nerasta.</p>
-                    )}
+                    ) : <p className="text-sm text-slate-400 italic">Atvykimų nerasta.</p>}
                   </div>
-
-                  <hr className="popup-divider" />
-
+                  <hr className="my-3 border-slate-200" />
                   <div className="popup-section">
-                    <p className="section-title">🚌 Visi maršrutai</p>
-                    <div className="route-grid">
+                    <p className="text-xs font-bold uppercase text-slate-500 mb-2">🚌 Visi maršrutai</p>
+                    <div className="flex flex-wrap gap-1.5 max-w-[200px]">
                       {stopRoutes.map((r, idx) => (
-                        <div
-                          key={idx}
-                          className="route-tag"
-                          title={r.destination}
-                        >
-                          {r.route}
-                        </div>
+                        <div key={idx} className="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold py-0.5 px-2 rounded" title={r.destination}>{r.route}</div>
                       ))}
                     </div>
                   </div>
@@ -1028,311 +877,220 @@ export default function MapPage() {
             </Marker>
           ))}
 
-          {/* Search marker */}
           {searchTarget && <Marker position={searchTarget} icon={customIcon} />}
-
-          <MapController
-            target={searchTarget}
-            clearTarget={() => setSearchTarget(null)}
-          />
+          <MapController target={searchTarget} clearTarget={() => setSearchTarget(null)} />
         </MapContainer>
 
         {/* SIDE PANEL */}
-      <div className={`side-panel ${panelOpen ? "open" : ""}`}>
-        <button className="panel-close-btn" onClick={() => setPanelOpen(false)}>
-          ✕
-        </button>
+        <div className={`side-panel ${panelOpen ? "open" : ""}`}>
+          <button className="panel-close-btn" onClick={() => setPanelOpen(false)}>✕</button>
 
-        <div className="panel-content">
-          <h2>Vietos Analizė</h2>
-
-          {/* Place info */}
-          {selectedPlace && (
-            <div className="stat-card">
-              <h3>Pasirinkta vieta</h3>
-              <p className="place-address">{selectedPlace.name}</p>
-              <p className="place-coords">
-                {selectedPlace.latlng.lat.toFixed(5)},{" "}
-                {selectedPlace.latlng.lng.toFixed(5)}
-              </p>
-            </div>
-          )}
-
-          {/* WalkScore */}
-          {selectedPlace && <WalkScore latlng={selectedPlace.latlng} onScore={setWalkScoreValue} />}
-
-          {/* Gyvenimo kokybės balas */}
-          {selectedPlace && qualityOfLifeScore !== null && (
-            <div className="stat-card" style={{ marginTop: '1rem' }}>
-              <h3>Gyvenimo kokybės balas</h3>
-              <p><strong>{qualityOfLifeScore}/100</strong></p>
-            </div>
-          )}
-
-          {/* Transit stats */}
-          <div className="stat-card">
-            <h3>Viešasis transportas</h3>
-            <p>
-              Stotelės (750m): <strong>{busStops.length}</strong>
-            </p>
-
-            <div className="stat-card" style={{ marginTop: "1rem" }}>
-              <h3>Susisiekimo Intensyvumas</h3>
-
-              {stopFrequency.length > 0 ? (
-                <>
-                  <div className="main-stat">
-                    <span className="stat-number">
-                      {(
-                        stopFrequency.reduce(
-                          (acc, curr) => acc + curr.count,
-                          0
-                        ) / stopFrequency.length
-                      ).toFixed(1)}
-                    </span>
-                    <span className="stat-label">
-                      autobusai / valandą (vidurkis)
-                    </span>
-                  </div>
-
-                  <div className="frequency-mini-chart">
-                    {stopFrequency.map((f, i) => (
-                      <div key={i} className="chart-bar-wrapper">
-                        <div
-                          className="chart-bar"
-                          style={{ height: `${(f.count / 15) * 100}%` }}
-                          title={`${f.hour}:00 val. - ${f.count} autob.`}
-                        />
-                        <span className="bar-label">{f.hour}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <p>Pasirinkite stotelę, kad pamatytumėte analizę.</p>
-              )}
-            </div>
+          <div className="panel-content">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="m-0 text-xl font-black">Vietos Analizė</h2>
+            {selectedPlace && (
+              <button 
+                className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-xs font-bold"
+                onClick={() => navigate(`/analysis?lat=${selectedPlace.latlng.lat}&lon=${selectedPlace.latlng.lng}&address=${encodeURIComponent(selectedPlace.name)}`)}
+              >
+                <ExternalLink size={14} /> Atidaryti pilną
+              </button>
+            )}
           </div>
-          {selectedPlace && (
-            <div className="stat-card" style={{ marginTop: '1rem' }}>
-              <h3>Pasiekiamumo Įvertinimas</h3>
-              
-              {loadingEval ? (
-                <p>Skaičiuojami atstumai...</p>
-              ) : accessibilityData ? (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
-                    <div style={{ 
-                      fontSize: '32px', 
-                      fontWeight: 'bold', 
-                      color: accessibilityData.totalScore > 75 ? '#10b981' : accessibilityData.totalScore > 40 ? '#f59e0b' : '#ef4444' 
-                    }}>
-                      {accessibilityData.totalScore}/100
-                    </div>
-                    <div style={{ fontSize: '14px', color: '#64748b' }}>
-                      Paskaičiuota pagal atstumus iki būtiniausių paslaugų.
-                    </div>
-                  </div>
+            {selectedPlace && (
+              <div className="stat-card">
+                <h3>Pasirinkta vieta</h3>
+                <p className="place-address">{selectedPlace.name}</p>
+                <p className="place-coords">{selectedPlace.latlng.lat.toFixed(5)}, {selectedPlace.latlng.lng.toFixed(5)}</p>
+              </div>
+            )}
 
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {accessibilityData.features.map((feature: any, idx: number) => (
-                      <li key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '20px' }}>{feature.icon}</span>
-                          <div>
-                            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{feature.type}</div>
-                            <div style={{ fontSize: '12px', color: '#64748b' }}>{feature.name}</div>
+            {selectedPlace && <WalkScore latlng={selectedPlace.latlng} onScore={setWalkScoreValue} />}
+
+            {selectedPlace && qualityOfLifeScore !== null && (
+              <div className="stat-card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
+                <h3 className="text-blue-800">Gyvenimo kokybės balas</h3>
+                <p className="text-4xl font-black text-blue-600 m-0">{qualityOfLifeScore}<span className="text-xl text-blue-400 font-medium">/100</span></p>
+              </div>
+            )}
+
+            <div className="stat-card">
+              <h3>Viešasis transportas</h3>
+              <p className="text-sm text-slate-600 mb-4">Stotelės (750m): <strong className="text-slate-900 text-base ml-1">{busStops.length}</strong></p>
+
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <h3 className="mb-2">Susisiekimo Intensyvumas</h3>
+                {stopFrequency.length > 0 ? (
+                  <>
+                    <div className="flex items-baseline gap-2 mb-4">
+                      <span className="text-3xl font-black text-indigo-600">
+                        {(stopFrequency.reduce((acc, curr) => acc + curr.count, 0) / stopFrequency.length).toFixed(1)}
+                      </span>
+                      <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">autob. / val.</span>
+                    </div>
+                    <div className="flex items-end h-16 gap-1 border-b border-slate-200 mt-2">
+                      {stopFrequency.map((f, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center h-full group relative">
+                          <div className="w-full bg-indigo-500 rounded-t-sm transition-all duration-300 group-hover:bg-indigo-400" style={{ height: `${Math.max(4, (f.count / 15) * 100)}%` }} />
+                          <span className="text-[9px] text-slate-400 mt-1 font-medium">{f.hour}</span>
+                          <div className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-slate-800 text-white text-[10px] py-1 px-2 rounded pointer-events-none transition-opacity z-10 whitespace-nowrap">
+                            {f.count} autob.
                           </div>
                         </div>
-                        <div style={{ fontWeight: 'bold', color: '#3b82f6', fontSize: '14px' }}>
-                          {feature.distance < 1000 
-                            ? `${Math.round(feature.distance)} m` 
-                            : `${(feature.distance / 1000).toFixed(1)} km`}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              ) : (
-                <p>Nepavyko gauti vertinimo duomenų.</p>
-              )}
+                      ))}
+                    </div>
+                  </>
+                ) : <p className="text-sm text-slate-500 italic m-0">Pasirinkite stotelę, kad pamatytumėte grafiką.</p>}
+              </div>
             </div>
-          )}
+
+            {selectedPlace && (
+              <div className="stat-card">
+                <h3>Pasiekiamumo Įvertinimas</h3>
+                {loadingEval ? (
+                  <p className="text-sm text-slate-500 animate-pulse">Skaičiuojami atstumai...</p>
+                ) : accessibilityData ? (
+                  <>
+                    <div className="flex items-center gap-4 mb-5 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <div className={`text-4xl font-black ${accessibilityData.totalScore > 75 ? 'text-emerald-500' : accessibilityData.totalScore > 40 ? 'text-amber-500' : 'text-rose-500'}`}>
+                        {accessibilityData.totalScore}
+                      </div>
+                      <div className="text-xs text-slate-500 font-medium leading-relaxed">Paskaičiuota pagal atstumus iki būtiniausių paslaugų (iki 1km).</div>
+                    </div>
+                    <ul className="flex flex-col gap-2.5 p-0 m-0 list-none">
+                      {accessibilityData.features.map((feature: any, idx: number) => (
+                        <li key={idx} className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl bg-slate-50 p-1.5 rounded-lg">{feature.icon}</span>
+                            <div>
+                              <div className="font-bold text-sm text-slate-900 leading-tight">{feature.type}</div>
+                              <div className="text-xs text-slate-500 truncate max-w-[140px] mt-0.5">{feature.name}</div>
+                            </div>
+                          </div>
+                          <div className="font-black text-blue-600 text-sm bg-blue-50 py-1 px-2 rounded-lg">
+                            {feature.distance < 1000 ? `${Math.round(feature.distance)} m` : `${(feature.distance / 1000).toFixed(1)} km`}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : <p className="text-sm text-slate-500">Nepavyko gauti vertinimo duomenų.</p>}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      </div>
 
-      {/* Path Clear Button */}
       {selectedPath && (
-        <button className="clear-path-btn" onClick={() => setSelectedPath(null)}>
-          <X size={16} /> Valyti maršrutą
+        <button className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-900/90 backdrop-blur text-white px-5 py-2.5 rounded-full font-semibold shadow-xl flex items-center gap-2 hover:bg-slate-800 transition-all z-[1000]" onClick={() => setSelectedPath(null)}>
+          <X size={18} /> Uždaryti maršrutą
         </button>
       )}
 
-      
+      {/* --- COMPARISON DASHBOARD --- */}
+      <div className="comparison-dashboard">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-3">Veiklos Analizė</h2>
+          <p className="text-lg text-slate-500 font-medium">Palyginkite dvi vietas pagal pasiekiamumą ir saugumą</p>
+        </div>
 
-              {/* --- COMPARISON DASHBOARD --- */}
-        <div className="comparison-dashboard" style={{ padding: '60px 40px', background: '#f1f5f9', borderTop: '2px solid#cbd5e1' }}>
-           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-             <h2 style={{ fontSize: '2rem', color: '#1e293b' }}>Veiklos Analizė</h2>
-             <p style={{ color: '#64748b' }}>Palyginkite dvi vietas pagal pasiekiamumą ir saugumą</p>
-           </div>
-    
-          {/* Search & Action Row */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginBottom: '60px' }}>
-            
-            <div className="glass-panel search-box" style={{ width: '300px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
-              <input 
-                type="text" 
-                placeholder="Pirmo adreso paieška..." 
-                value={compQuery1} 
-                onChange={(e) => setCompQuery1(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && startComparison()}
-                style={{ width: '100%', padding: '4px' }}
-              />
-            </div>
-  
-            <div style={{ fontSize: '24px', fontWeight: '900', color: '#cbd5e1' }}>VS</div>
-  
-            <div className="glass-panel search-box" style={{ width: '300px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
-              <input 
-                type="text" 
-                placeholder="Antro adreso paieška..." 
-                value={compQuery2} 
-                onChange={(e) => setCompQuery2(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && startComparison()}
-                style={{ width: '100%', padding: '4px' }}
-              />
-            </div>
-  
-            <button 
-              className="glass-btn" 
-              onClick={startComparison}
-              disabled={!compQuery1.trim() || !compQuery2.trim()}
-              style={{ 
-                background: (!compQuery1.trim() || !compQuery2.trim()) ? '#cbd5e1' : '#3b82f6', 
-                color: 'white', 
-                padding: '14px 28px',
-                fontSize: '1rem',
-                boxShadow: '0 10px 15px -3px rgb(59 130 246 / 0.3)'
-              }}
-            >
-              📊 Palyginti
-            </button>
+        <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-16">
+          <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-2 w-full md:w-[320px] flex items-center transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500">
+            <input type="text" placeholder="Pirmo adreso paieška..." value={compQuery1} onChange={(e) => setCompQuery1(e.target.value)} onKeyDown={(e) => e.key === "Enter" && startComparison()} className="w-full bg-transparent border-none outline-none px-3 py-2 text-slate-900 font-medium placeholder-slate-400" />
           </div>
-   
-          {/* Hidden WalkScore fetchers */}
-          {isComparing && compPlace1 && (
-            <div style={{ display: 'none' }}>
-              <WalkScore latlng={compPlace1.latlng} onScore={setPlace1WalkScore} />
-            </div>
-          )}
-          {isComparing && compPlace2 && (
-            <div style={{ display: 'none' }}>
-              <WalkScore latlng={compPlace2.latlng} onScore={setPlace2WalkScore} />
-            </div>
-          )}
 
-          {/* Result Columns */}
-          {isComparing && (
-            <div style={{ display: 'flex', gap: '30px', maxWidth: '1200px', margin: '0 auto' }}>
-              {/* Column 1 */}
-              <div className="glass-panel" style={{ flex: 1, borderTop: '4px solid #3b82f6' }}>
-                <h3 style={{ fontSize: '1.4rem', marginBottom: '20px' }}>{compPlace1?.name}</h3>
-                
-                {/* --- THE BIG SUMMARY SCORES --- */}
-                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-                  <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Pasiekiamumas</div>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3b82f6' }}>{place1Analysis?.totalScore || 0}</div>
-                  </div>
-                  
-                  <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Saugumas</div>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: place1CrimeScore && place1CrimeScore > 50 ? '#10b981' : '#ef4444' }}>
-                      {place1CrimeScore !== null ? place1CrimeScore : 'N/A'}
-                    </div>
-                  </div>
+          <div className="text-sm font-black text-slate-300 bg-slate-100 rounded-full px-4 py-2 uppercase tracking-widest">VS</div>
+
+          <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-2 w-full md:w-[320px] flex items-center transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500">
+            <input type="text" placeholder="Antro adreso paieška..." value={compQuery2} onChange={(e) => setCompQuery2(e.target.value)} onKeyDown={(e) => e.key === "Enter" && startComparison()} className="w-full bg-transparent border-none outline-none px-3 py-2 text-slate-900 font-medium placeholder-slate-400" />
+          </div>
+
+          <button onClick={startComparison} disabled={!compQuery1.trim() || !compQuery2.trim()} className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold py-3.5 px-8 rounded-xl transition-all shadow-lg shadow-blue-600/20 disabled:shadow-none flex items-center gap-2">
+            📊 Palyginti
+          </button>
+        </div>
+
+        {isComparing && compPlace1 && <div className="hidden"><WalkScore latlng={compPlace1.latlng} onScore={setPlace1WalkScore} /></div>}
+        {isComparing && compPlace2 && <div className="hidden"><WalkScore latlng={compPlace2.latlng} onScore={setPlace2WalkScore} /></div>}
+
+        {isComparing && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+            {/* Column 1 */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500" />
+              <h3 className="text-2xl font-bold text-slate-900 mb-8 truncate pr-8" title={compPlace1?.name}>{compPlace1?.name}</h3>
               
-                  <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#1e40af', textTransform: 'uppercase', fontWeight: 'bold' }}>Gyvenimo Kokybė</div>
-                    <div style={{ fontSize: '28px', fontWeight: '900', color: '#1d4ed8' }}>
-                      {Math.round(((place1Analysis?.totalScore || 0) + (place1WalkScore || 0) + (place1CrimeScore || 0)) / 3) || 0}
-                    </div>
-                  </div>
+              <div className="flex gap-4 mb-8">
+                <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
+                  <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Pasiekiamumas</div>
+                  <div className="text-3xl font-black text-blue-600">{place1Analysis?.totalScore || 0}</div>
                 </div>
-
-                {place1Analysis && (
-                  <div className="analysis-results">
-                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                      {place1Analysis.features.map((f: any, i: number) => (
-                        <li key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '20px' }}>{f.icon}</span>
-                            <span>{f.type}</span>
-                          </span>
-                          <span style={{ fontWeight: 'bold', color: '#64748b' }}>
-                            {f.distance < 1000 ? `${Math.round(f.distance)} m` : `${(f.distance / 1000).toFixed(1)} km`}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
+                  <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Saugumas</div>
+                  <div className={`text-3xl font-black ${place1CrimeScore && place1CrimeScore > 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{place1CrimeScore !== null ? place1CrimeScore : 'N/A'}</div>
+                </div>
+                <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex-1 text-center">
+                  <div className="text-[10px] text-blue-800 uppercase font-black tracking-wider mb-2">Gyvenimo Kokybė</div>
+                  <div className="text-4xl font-black text-blue-700">{Math.round(((place1Analysis?.totalScore || 0) + (place1WalkScore || 0) + (place1CrimeScore || 0)) / 3) || 0}</div>
+                </div>
               </div>
 
-              {/* Column 2 */}
-              <div className="glass-panel" style={{ flex: 1, borderTop: '4px solid #ef4444'  }}>
-                <h3 style={{ fontSize: '1.4rem', marginBottom: '20px' }}>{compPlace2?.name}</h3>
-                
-                {/* --- THE BIG SUMMARY SCORES --- */}
-                <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-                  <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Pasiekiamumas</div>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>{place2Analysis?.totalScore || 0}</div>
-                  </div>
-                  
-                  <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Saugumas</div>
-                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: place2CrimeScore && place2CrimeScore > 50 ? '#10b981' : '#ef4444' }}>
-                      {place2CrimeScore !== null ? place2CrimeScore : 'N/A'}
-                    </div>
-                  </div>
-              
-                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '15px', borderRadius: '8px', flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontSize: '12px', color: '#b91c1c', textTransform: 'uppercase', fontWeight: 'bold' }}>Gyvenimo Kokybė</div>
-                    <div style={{ fontSize: '28px', fontWeight: '900', color: '#b91c1c' }}>
-                      {Math.round(((place2Analysis?.totalScore || 0) + (place2WalkScore || 0) + (place2CrimeScore || 0)) / 3) || 0}
-                    </div>
-                  </div>
-                </div>
-
-                {place2Analysis && (
-                  <div className="analysis-results">
-                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                      {place2Analysis.features.map((f: any, i: number) => (
-                        <li key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontSize: '20px' }}>{f.icon}</span>
-                            <span>{f.type}</span>
-                          </span>
-                          <span style={{ fontWeight: 'bold', color: '#64748b' }}>
-                            {f.distance < 1000 ? `${Math.round(f.distance)} m` : `${(f.distance / 1000).toFixed(1)} km`}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              {place1Analysis && (
+                <ul className="flex flex-col gap-3 m-0 p-0 list-none">
+                  {place1Analysis.features.map((f: any, i: number) => (
+                    <li key={i} className="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl bg-slate-50 p-2 rounded-lg">{f.icon}</span>
+                        <span className="font-semibold text-slate-800">{f.type}</span>
+                      </div>
+                      <span className="font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg text-sm">
+                        {f.distance < 1000 ? `${Math.round(f.distance)} m` : `${(f.distance / 1000).toFixed(1)} km`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-          )}
-    </div>
 
+            {/* Column 2 */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-rose-500" />
+              <h3 className="text-2xl font-bold text-slate-900 mb-8 truncate pr-8" title={compPlace2?.name}>{compPlace2?.name}</h3>
+              
+              <div className="flex gap-4 mb-8">
+                <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
+                  <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Pasiekiamumas</div>
+                  <div className="text-3xl font-black text-rose-500">{place2Analysis?.totalScore || 0}</div>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
+                  <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Saugumas</div>
+                  <div className={`text-3xl font-black ${place2CrimeScore && place2CrimeScore > 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{place2CrimeScore !== null ? place2CrimeScore : 'N/A'}</div>
+                </div>
+                <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex-1 text-center">
+                  <div className="text-[10px] text-rose-800 uppercase font-black tracking-wider mb-2">Gyvenimo Kokybė</div>
+                  <div className="text-4xl font-black text-rose-700">{Math.round(((place2Analysis?.totalScore || 0) + (place2WalkScore || 0) + (place2CrimeScore || 0)) / 3) || 0}</div>
+                </div>
+              </div>
 
-
+              {place2Analysis && (
+                <ul className="flex flex-col gap-3 m-0 p-0 list-none">
+                  {place2Analysis.features.map((f: any, i: number) => (
+                    <li key={i} className="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl bg-slate-50 p-2 rounded-lg">{f.icon}</span>
+                        <span className="font-semibold text-slate-800">{f.type}</span>
+                      </div>
+                      <span className="font-black text-rose-600 bg-rose-50 px-3 py-1.5 rounded-lg text-sm">
+                        {f.distance < 1000 ? `${Math.round(f.distance)} m` : `${(f.distance / 1000).toFixed(1)} km`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-
-

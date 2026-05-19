@@ -1,107 +1,25 @@
-/* Solid, clean dark background */
-.landing-container {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #0f172a; 
-  color: #f8fafc;
-  font-family: system-ui, -apple-system, sans-serif;
+/* CitySelect.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+html {
+  scroll-behavior: smooth;
 }
 
-.content-wrapper {
-  width: 100%;
-  max-width: 900px;
-  padding: 40px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+body {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Typography */
-.title {
-  font-size: 3.5rem;
-  font-weight: 800;
-  margin-bottom: 10px;
-  letter-spacing: -1px;
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.subtitle {
-  font-size: 1.1rem;
-  color: #94a3b8;
-  margin-bottom: 40px;
+#features > div {
+  animation: slideUp 0.8s ease backwards;
 }
 
-/* The Search Bar */
-.search-container {
-  position: relative;
-  width: 100%;
-  max-width: 500px;
-  margin-bottom: 40px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #64748b;
-}
-
-.search-input {
-  width: 100%;
-  padding: 16px 16px 16px 48px;
-  font-size: 1.1rem;
-  border-radius: 12px;
-  border: 2px solid #334155;
-  background-color: #1e293b;
-  color: white;
-  transition: all 0.2s ease;
-  box-sizing: border-box; /* Prevents input from breaking layout */
-}
-
-.search-input:focus {
-  border-color: #3b82f6;
-  outline: none;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
-}
-
-/* The Grid */
-.city-grid {
-  display: grid;
-  /* This automatically makes the grid 2, 3, or 4 columns depending on screen size! */
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  width: 100%;
-}
-
-.city-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  background-color: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 10px;
-  color: #e2e8f0;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-/* Hover effect */
-.city-link:hover {
-  background-color: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.no-results {
-  grid-column: 1 / -1; /* spans the whole grid */
-  text-align: center;
-  padding: 40px;
-  color: #64748b;
-  font-size: 1.1rem;
-}
+#features > div:nth-child(1) { animation-delay: 0.1s; }
+#features > div:nth-child(2) { animation-delay: 0.2s; }
+#features > div:nth-child(3) { animation-delay: 0.3s; }
