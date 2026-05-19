@@ -2,13 +2,10 @@ import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, 
-  Map as MapIcon, 
   TrendingUp, 
   Bus, 
   ShieldCheck, 
   Navigation, 
-  Info,
-  ExternalLink
 } from "lucide-react";
 import WalkScore from "../components/WalkScore";
 import "./AnalysisPage.css";
@@ -26,7 +23,7 @@ export default function AnalysisPage() {
   const [accessibilityData, setAccessibilityData] = useState<any>(null);
   const [stopFrequency, setStopFrequency] = useState<any[]>([]);
   const [walkScoreValue, setWalkScoreValue] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const setLoading = useState(true);
 
   useEffect(() => {
     const fetchAllData = async () => {
