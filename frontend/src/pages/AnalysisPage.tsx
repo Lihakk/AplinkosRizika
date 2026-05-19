@@ -23,7 +23,7 @@ export default function AnalysisPage() {
   const [accessibilityData, setAccessibilityData] = useState<any>(null);
   const [stopFrequency, setStopFrequency] = useState<any[]>([]);
   const [walkScoreValue, setWalkScoreValue] = useState<number | null>(null);
-  const setLoading = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAllData = async () => {
