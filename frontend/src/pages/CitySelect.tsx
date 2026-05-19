@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Search, ChevronRight, Shield, Bus, School, Info, ArrowRight } from "lucide-react";
+import { MapPin, Search, Shield, Bus, School,  ArrowRight } from "lucide-react";
 import "./CitySelect.css";
 
 const allCities = ["Kaunas", "Vilnius"].sort();
