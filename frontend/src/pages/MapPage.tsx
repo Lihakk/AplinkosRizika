@@ -1,8 +1,16 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, GeoJSON, useMap, Popup } from "react-leaflet";
 import { Icon, LatLng, LatLngBounds, divIcon } from "leaflet";
 import { Search, ArrowLeft, ShieldAlert, Map as MapIcon, X, School, Crosshair, ExternalLink } from "lucide-react";
+import type {
+  Feature as GeoJsonFeature,
+  GeoJsonObject,
+  MultiPolygon,
+  Point,
+  Polygon,
+  Position as GeoJsonPosition,
+} from "geojson";
 import "leaflet/dist/leaflet.css";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import "./MapPage.css";
@@ -11,6 +19,7 @@ import L from "leaflet";
 import LocationMarker from "../components/LocationMarker";
 import RoutingControl from "../components/RoutingControl";
 import WalkScore from "../components/WalkScore";
+import { parseAruodasInput, type AruodasParseResult } from "../utils/aruodas";
 import { geocode } from "../utils/geocoding";
 
 // --- Types ---
@@ -19,6 +28,8 @@ type CrimeKey = "hp" | "th";
 const SCHOOL_TYPES = ["pradine", "progimnazija", "gimnazija"] as const;
 
 type SchoolType = (typeof SCHOOL_TYPES)[number];
+type JsonRecord = Record<string, unknown>;
+type EntityId = string | number;
 
 const SCHOOL_TYPE_LABELS: Record<SchoolType, string> = {
   pradine: "Pradinė",
@@ -26,7 +37,7 @@ const SCHOOL_TYPE_LABELS: Record<SchoolType, string> = {
   gimnazija: "Gimnazija",
 };
 
-const normalizeSchoolType = (value: any): SchoolType | null => {
+const normalizeSchoolType = (value: unknown): SchoolType | null => {
   if (!value) return null;
   const lower = String(value).toLowerCase().trim();
   if (lower.includes("prad")) return "pradine";
@@ -47,14 +58,118 @@ interface SelectedPlace {
   name: string;
 }
 
+interface AccessibilityFeature {
+  type?: string;
+  name?: string;
+  distance: number;
+  icon?: string;
+  score?: number;
+  rangeLabel?: string;
+}
+
+interface AccessibilityData {
+  totalScore: number;
+  features: AccessibilityFeature[];
+}
+
+interface StopArrival {
+  shapeId?: string;
+  route?: string;
+  time?: string;
+  destination?: string;
+}
+
+interface StopRoute {
+  route?: string;
+  destination?: string;
+}
+
+interface StopFrequencyPoint {
+  hour: string;
+  count: number;
+}
+
+interface MapFeature {
+  id?: EntityId;
+  name?: string;
+  type?: string;
+  geometry: GeoJsonObject | null;
+  distance?: number;
+}
+
+interface SchoolFeature {
+  school_Id: EntityId;
+  name: string;
+  rating: number;
+  type: SchoolType | null;
+  location: Point | null;
+  cityId?: number;
+}
+
+interface PoliceStation {
+  id?: EntityId;
+  name: string;
+  geo: Point | null;
+}
+
+type PoliceStationWithDistance = PoliceStation & { distance: number };
+
+interface EldershipFeature {
+  eldership_Name: string;
+  geometry: GeoJsonObject | null;
+}
+
+interface CrimeByEldership {
+  eldership_Id?: EntityId;
+  eldership_Name: string;
+  City_id?: EntityId;
+  Health_total: number;
+  Theft_total: number;
+  All_total: number;
+  geometry: GeoJsonObject | null;
+  Geometry: GeoJsonObject | null;
+}
+
+type ProcessedCrimeData = CrimeByEldership & { combined: number };
+
+interface LocationResolveResult {
+  latlng: LatLng;
+  label: string;
+  parsed: AruodasParseResult | null;
+}
+
 // --- Config & Constants ---
-const safeJsonParse = (data: any) => {
+const safeJsonParse = <T = unknown,>(data: unknown): T | null => {
   if (!data) return null;
   if (typeof data === "string") {
-    try { return JSON.parse(data); }
+    try { return JSON.parse(data) as T; }
     catch { return null; }
   }
-  return data;
+  return data as T;
+};
+
+const isRecord = (value: unknown): value is JsonRecord =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const readString = (value: unknown, fallback = "") =>
+  typeof value === "string" ? value : fallback;
+
+const readNumber = (value: unknown, fallback = 0) => {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : fallback;
+};
+
+const readId = (...values: unknown[]): EntityId | undefined => {
+  const value = values.find((candidate) => typeof candidate === "string" || typeof candidate === "number");
+  return value as EntityId | undefined;
+};
+
+const getPointCoordinates = (geometry: GeoJsonObject | null): [number, number] | null => {
+  if (!geometry || geometry.type !== "Point") return null;
+  const coordinates = (geometry as Point).coordinates;
+  if (coordinates.length < 2) return null;
+  const [lng, lat] = coordinates;
+  return typeof lng === "number" && typeof lat === "number" ? [lng, lat] : null;
 };
 const API_URL = import.meta.env.VITE_API_URL || "http://144.24.247.126:5178";
 const customIcon = new Icon({ 
@@ -74,6 +189,11 @@ const busIcon = divIcon({
 const cityCoordinates: Record<string, [number, number]> = {
   "Kaunas": [54.8985, 23.9036],
   "Vilnius": [54.6872, 25.2797]
+};
+
+const cityIdByName: Record<string, number> = {
+  Kaunas: 1,
+  Vilnius: 2,
 };
 
 const expandBounds = (bounds: LatLngBounds, factor: number) => {
@@ -133,7 +253,7 @@ const createFeatureIcon = (emoji: string, color: string) => {
   });
 };
 
-function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
+function pointInRing(lng: number, lat: number, ring: GeoJsonPosition[]): boolean {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
     const [xi, yi] = ring[i];
@@ -144,18 +264,19 @@ function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
   return inside;
 }
 
-function geometryContains(geom: any, lng: number, lat: number): boolean {
+function geometryContains(geom: GeoJsonObject | null, lng: number, lat: number): boolean {
   if (!geom) return false;
-  if (geom.type === "Feature") return geometryContains(geom.geometry, lng, lat);
+  if (geom.type === "Feature") return geometryContains((geom as GeoJsonFeature).geometry, lng, lat);
   if (geom.type === "Polygon") {
-    if (!pointInRing(lng, lat, geom.coordinates[0])) return false;
-    for (let k = 1; k < geom.coordinates.length; k++) {
-      if (pointInRing(lng, lat, geom.coordinates[k])) return false;
+    const coordinates = (geom as Polygon).coordinates;
+    if (!pointInRing(lng, lat, coordinates[0])) return false;
+    for (let k = 1; k < coordinates.length; k++) {
+      if (pointInRing(lng, lat, coordinates[k])) return false;
     }
     return true;
   }
   if (geom.type === "MultiPolygon") {
-    return geom.coordinates.some((poly: number[][][]) => {
+    return (geom as MultiPolygon).coordinates.some((poly) => {
       if (!pointInRing(lng, lat, poly[0])) return false;
       for (let k = 1; k < poly.length; k++) {
         if (pointInRing(lng, lat, poly[k])) return false;
@@ -166,39 +287,48 @@ function geometryContains(geom: any, lng: number, lat: number): boolean {
   return false;
 }
 
-const getFeatureCenter = (geometry: any): [number, number] | null => {
-  if (!geometry || !geometry.coordinates) return null;
+const getRingCenter = (coordinates: GeoJsonPosition[]): [number, number] | null => {
+  if (coordinates.length === 0) return null;
+  let latSum = 0;
+  let lonSum = 0;
+  coordinates.forEach((coordinate) => {
+    lonSum += coordinate[0];
+    latSum += coordinate[1];
+  });
+  return [latSum / coordinates.length, lonSum / coordinates.length];
+};
+
+const getFeatureCenter = (geometry: GeoJsonObject | null): [number, number] | null => {
+  if (!geometry) return null;
+
+  if (geometry.type === "Feature") {
+    return getFeatureCenter((geometry as GeoJsonFeature).geometry);
+  }
   
   if (geometry.type === "Point") {
-    return [geometry.coordinates[1], geometry.coordinates[0]];
+    const coordinates = getPointCoordinates(geometry);
+    return coordinates ? [coordinates[1], coordinates[0]] : null;
   }
   
   if (geometry.type === "Polygon") {
-    const coords = geometry.coordinates[0];
-    let latSum = 0, lonSum = 0;
-    coords.forEach((c: any) => { lonSum += c[0]; latSum += c[1]; });
-    return [latSum / coords.length, lonSum / coords.length];
+    return getRingCenter((geometry as Polygon).coordinates[0]);
   }
 
   if (geometry.type === "MultiPolygon") {
-    const coords = geometry.coordinates[0][0];
-    let latSum = 0, lonSum = 0;
-    coords.forEach((c: any) => { lonSum += c[0]; latSum += c[1]; });
-    return [latSum / coords.length, lonSum / coords.length];
+    return getRingCenter((geometry as MultiPolygon).coordinates[0][0]);
   }
   
   return null;
 };
 
 // --- Map Subcomponents ---
-function MapController({ target, clearTarget }: { target: LatLng | null, clearTarget: () => void }) {
+function MapController({ target }: { target: LatLng | null }) {
   const map = useMap();
   useEffect(() => {
     if (target) {
       map.flyTo(target, 16, { animate: true, duration: 1.5 });
-      clearTarget();
     }
-  }, [target, map, clearTarget]);
+  }, [target, map]);
   return null;
 }
 
@@ -213,12 +343,14 @@ function CityViewController({ center }: { center: [number, number] }) {
   return null;
 }
 
-function findClosestPolice(userPos: L.LatLng, policeList: any[]) {
-  let closest = null;
+function findClosestPolice(userPos: L.LatLng, policeList: PoliceStation[]) {
+  let closest: PoliceStationWithDistance | null = null;
   let minDist = Infinity;
 
   for (const p of policeList) {
-    const [lng, lat] = p.geo.coordinates;
+    const coordinates = getPointCoordinates(p.geo);
+    if (!coordinates) continue;
+    const [lng, lat] = coordinates;
     const pos = L.latLng(lat, lng);
     const dist = userPos.distanceTo(pos);
 
@@ -241,10 +373,12 @@ export default function MapPage() {
   const mapRef = useRef<L.Map | null>(null);
 
   const [searchTarget, setSearchTarget] = useState<LatLng | null>(null);
+  const [searchResultLabel, setSearchResultLabel] = useState<string | undefined>();
+  const [aruodasParse, setAruodasParse] = useState<AruodasParseResult | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState({ elderships: false, crimes: false, search: false });
-  const [accessibilityData, setAccessibilityData] = useState<any>(null);
+  const [accessibilityData, setAccessibilityData] = useState<AccessibilityData | null>(null);
   const [loadingEval, setLoadingEval] = useState(false);
   const [routeStart, setRouteStart] = useState<LatLng | null>(null);
   const [routeEnd, setRouteEnd] = useState<LatLng | null>(null);
@@ -255,8 +389,8 @@ export default function MapPage() {
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
   const [isComparing, setIsComparing] = useState(false);
-  const [place1Analysis, setPlace1Analysis] = useState<any>(null);
-  const [place2Analysis, setPlace2Analysis] = useState<any>(null);
+  const [place1Analysis, setPlace1Analysis] = useState<AccessibilityData | null>(null);
+  const [place2Analysis, setPlace2Analysis] = useState<AccessibilityData | null>(null);
   const [place1WalkScore, setPlace1WalkScore] = useState<number | null>(null);
   const [place2WalkScore, setPlace2WalkScore] = useState<number | null>(null);
   const [place1CrimeScore, setPlace1CrimeScore] = useState<number | null>(null);
@@ -266,16 +400,16 @@ export default function MapPage() {
   const [compPlace1, setCompPlace1] = useState<SelectedPlace | null>(null);
   const [compPlace2, setCompPlace2] = useState<SelectedPlace | null>(null);
 
-  const [schools, setSchools] = useState<any[]>([]);
-  const [police, setPolice] = useState<any[]>([]);
+  const [schools, setSchools] = useState<SchoolFeature[]>([]);
+  const [police, setPolice] = useState<PoliceStation[]>([]);
   const [closestPolice, setClosestPolice] = useState<{ latlng: LatLng; name: string; distance: number } | null>(null);
   const [showingPolice, setShowingPolice] = useState(false);
-  const [elderships, setElderships] = useState<any[]>([]);
-  const [crimeByEldership, setCrimeByEldership] = useState<any[]>([]);
+  const [elderships, setElderships] = useState<EldershipFeature[]>([]);
+  const [crimeByEldership, setCrimeByEldership] = useState<CrimeByEldership[]>([]);
   const [busStops, setBusStops] = useState<BusStop[]>([]);
-  const [stopArrivals, setStopArrivals] = useState<any[]>([]);
-  const [stopRoutes, setStopRoutes] = useState<any[]>([]);
-  const [selectedPath, setSelectedPath] = useState<any>(null);
+  const [stopArrivals, setStopArrivals] = useState<StopArrival[]>([]);
+  const [stopRoutes, setStopRoutes] = useState<StopRoute[]>([]);
+  const [selectedPath, setSelectedPath] = useState<GeoJsonObject | null>(null);
   const [loadingArrivals, setLoadingArrivals] = useState(false);
   const [selectedCrimes, setSelectedCrimes] = useState<Record<CrimeKey, boolean>>({
     hp: true, th: true,
@@ -286,41 +420,77 @@ export default function MapPage() {
     gimnazija: true,
   });
   const [minSchoolRating, setMinSchoolRating] = useState<number>(1);
-  const [stopFrequency, setStopFrequency] = useState<any[]>([]);
+  const [stopFrequency, setStopFrequency] = useState<StopFrequencyPoint[]>([]);
   const [walkScoreValue, setWalkScoreValue] = useState<number | null>(null);
 
-  const [featureLayers, setFeatureLayers] = useState<Record<string, any[]>>({});
+  const [featureLayers, setFeatureLayers] = useState<Record<string, MapFeature[]>>({});
   const [activeFeatures, setActiveFeatures] = useState<Record<string, boolean>>({});
 
-  const [selectedCrimeEldership, setSelectedCrimeEldership] = useState<any>(null);
-  const crimeLayerRef = useRef<any>(null);
+  const [selectedCrimeEldership, setSelectedCrimeEldership] = useState<CrimeByEldership | null>(null);
+  const crimeLayerRef = useRef<L.Layer | null>(null);
 
   const hidePolice = () => {
     setClosestPolice(null);
     setShowingPolice(false);
   };
 
-  async function showClosestPolice(userPos: L.LatLng) {
+  const resolveLocationInput = async (input: string, rememberAruodas = false): Promise<LocationResolveResult | null> => {
+    const parsed = parseAruodasInput(input);
+    if (rememberAruodas) setAruodasParse(parsed);
+
+    if (parsed?.coordinates) {
+      return { latlng: parsed.coordinates, label: parsed.display, parsed };
+    }
+
+    const query = parsed?.query || input;
+    const latlng = await geocode(query, parsed?.city || city);
+    if (!latlng) return null;
+
+    return { latlng, label: parsed?.display || input, parsed };
+  };
+
+  const showClosestPolice = useCallback(async (userPos: L.LatLng) => {
     if (!mapRef.current) return;
-    const policeData = police.length > 0 ? police : await loadPolice();
+    let policeData = police;
+    if (policeData.length === 0) {
+      try {
+        const res = await fetch(`${API_URL}/api/Police`);
+        const raw: unknown = await res.json();
+        policeData = Array.isArray(raw) ? raw.map((value): PoliceStation => {
+          const item = isRecord(value) ? value : {};
+          return {
+            id: readId(item.id),
+            name: readString(item.name, "Policijos nuovada"),
+            geo: safeJsonParse<Point>(item.point),
+          };
+        }) : [];
+        setPolice(policeData);
+      } catch (err) {
+        console.error("Failed to load police", err);
+        policeData = [];
+      }
+    }
+
     if (!policeData || policeData.length === 0) return;
 
     const closest = findClosestPolice(userPos, policeData);
     if (!closest) return;
 
-    const [lng, lat] = closest.geo.coordinates;
+    const coordinates = getPointCoordinates(closest.geo);
+    if (!coordinates) return;
+    const [lng, lat] = coordinates;
     const name = closest.name || "Policijos nuovada";
 
     setClosestPolice({ latlng: L.latLng(lat, lng), name, distance: closest.distance });
     setShowingPolice(true);
     mapRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
-  }
+  }, [police]);
 
   useEffect(() => {
     if (!showingPolice) return;
     const target = selectedPlace?.latlng ?? searchTarget;
     if (target) showClosestPolice(target);
-  }, [selectedPlace, searchTarget, showingPolice]);
+  }, [selectedPlace, searchTarget, showingPolice, showClosestPolice]);
 
   useEffect(() => {
     const fetchEvaluation = async () => {
@@ -355,12 +525,18 @@ export default function MapPage() {
     try {
       const center = mapRef.current?.getCenter() || { lat: cityCenter[0], lng: cityCenter[1] };
       const res = await fetch(`${API_URL}/api/MapFeatures/${endpoint}?lat=${center.lat}&lon=${center.lng}`);
-      const data = await res.json();
+      const data: unknown = await res.json();
       
-      const parsedData = data.map((item: any) => ({
-        ...item,
-        geometry: safeJsonParse(item.geometry)
-      }));
+      const parsedData: MapFeature[] = Array.isArray(data) ? data.map((value) => {
+        const item = isRecord(value) ? value : {};
+        return {
+          id: readId(item.id),
+          name: readString(item.name),
+          type: readString(item.type),
+          distance: readNumber(item.distance),
+          geometry: safeJsonParse<GeoJsonObject>(item.geometry),
+        };
+      }) : [];
 
       setFeatureLayers(p => ({ ...p, [endpoint]: parsedData }));
       setActiveFeatures(p => ({ ...p, [endpoint]: true }));
@@ -374,11 +550,21 @@ export default function MapPage() {
   const fetchNearbyBusStops = async (lat: number, lng: number) => {
     try {
       const res = await fetch(`${API_URL}/api/Transport/nearby-stops?lat=${lat}&lon=${lng}`);
-      const data = await res.json();
-      setBusStops(data.map((stop: any) => {
-        const geo = safeJsonParse(stop.geometry);
-        return { id: stop.id, lat: geo.coordinates[1], lon: geo.coordinates[0], name: stop.name || "Stotelė" };
-      }));
+      const data: unknown = await res.json();
+      const stops = Array.isArray(data) ? data.flatMap((value): BusStop[] => {
+        const stop = isRecord(value) ? value : {};
+        const geo = safeJsonParse<GeoJsonObject>(stop.geometry);
+        const coordinates = getPointCoordinates(geo);
+        if (!coordinates) return [];
+        const [lon, lat] = coordinates;
+        return [{
+          id: readNumber(stop.id),
+          lat,
+          lon,
+          name: readString(stop.name, "Stotelė"),
+        }];
+      }) : [];
+      setBusStops(stops);
     } catch (e) { console.error(e); }
   };
 
@@ -388,16 +574,36 @@ export default function MapPage() {
     setStopRoutes([]);
     try {
       const arrRes = await fetch(`${API_URL}/api/Transport/stop-arrivals?lat=${lat}&lon=${lon}`);
-      const arrData = await arrRes.json();
-      setStopArrivals(Array.isArray(arrData) ? arrData : []);
+      const arrData: unknown = await arrRes.json();
+      setStopArrivals(Array.isArray(arrData) ? arrData.map((value): StopArrival => {
+        const item = isRecord(value) ? value : {};
+        return {
+          shapeId: readString(item.shapeId),
+          route: readString(item.route),
+          time: readString(item.time),
+          destination: readString(item.destination),
+        };
+      }) : []);
       
       const routeRes = await fetch(`${API_URL}/api/Transport/stop-routes?lat=${lat}&lon=${lon}`);
-      const routeData = await routeRes.json();
-      setStopRoutes(Array.isArray(routeData) ? routeData : []);
+      const routeData: unknown = await routeRes.json();
+      setStopRoutes(Array.isArray(routeData) ? routeData.map((value): StopRoute => {
+        const item = isRecord(value) ? value : {};
+        return {
+          route: readString(item.route),
+          destination: readString(item.destination),
+        };
+      }) : []);
       
       const freqRes = await fetch(`${API_URL}/api/Transport/stop-frequency?lat=${lat}&lon=${lon}`);
-      const freqData = await freqRes.json();
-      setStopFrequency(Array.isArray(freqData) ? freqData : []);
+      const freqData: unknown = await freqRes.json();
+      setStopFrequency(Array.isArray(freqData) ? freqData.map((value): StopFrequencyPoint => {
+        const item = isRecord(value) ? value : {};
+        return {
+          hour: readString(item.hour ?? item.Hour),
+          count: readNumber(item.count ?? item.Count),
+        };
+      }) : []);
     } catch (e) { 
       console.error(e); 
     } finally { 
@@ -410,8 +616,8 @@ export default function MapPage() {
     setSelectedPath(null); 
     try {
       const res = await fetch(`${API_URL}/api/Transport/route-path/${shapeId}`);
-      const data = await res.json();
-      if (data.geometry) setSelectedPath(safeJsonParse(data.geometry)); 
+      const data: unknown = await res.json();
+      if (isRecord(data) && data.geometry) setSelectedPath(safeJsonParse<GeoJsonObject>(data.geometry)); 
     } catch (e) { console.error(e); }
   };
 
@@ -419,11 +625,13 @@ export default function MapPage() {
     if (!searchQuery.trim()) return;
     setIsLoading(p => ({ ...p, search: true }));
     try {
-      const pos = await geocode(searchQuery);
-      if (pos) {
-        setSearchTarget(pos);
+      const result = await resolveLocationInput(searchQuery, true);
+      if (result) {
+        setSearchResultLabel(result.label);
+        setSelectedPlace({ latlng: result.latlng, name: result.label });
+        setSearchTarget(result.latlng);
         setPanelOpen(true);
-        fetchNearbyBusStops(pos.lat, pos.lng);
+        fetchNearbyBusStops(result.latlng.lat, result.latlng.lng);
       }
     } catch (error) { console.error(error); } 
     finally { setIsLoading(p => ({ ...p, search: false })); }
@@ -433,12 +641,14 @@ export default function MapPage() {
     if (!searchQuery.trim() || !destQuery.trim()) return;
     setIsLoading(p => ({ ...p, search: true }));
     try {
-      const start = await geocode(searchQuery);
-      const end = await geocode(destQuery);
+      const start = await resolveLocationInput(searchQuery, true);
+      const end = await resolveLocationInput(destQuery);
       if (start && end) {
-        setSearchTarget(start);
-        setRouteStart(start);
-        setRouteEnd(end);
+        setSearchResultLabel(start.label);
+        setSelectedPlace({ latlng: start.latlng, name: start.label });
+        setSearchTarget(start.latlng);
+        setRouteStart(start.latlng);
+        setRouteEnd(end.latlng);
       }
     } catch (error) { console.error(error); } 
     finally { setIsLoading(p => ({ ...p, search: false })); }
@@ -459,6 +669,8 @@ export default function MapPage() {
   };
 
   const handleDoubleClickResult = (latlng: LatLng, address: string) => {
+    setAruodasParse(null);
+    setSearchResultLabel(address);
     setSearchQuery(address);
     setSearchTarget(latlng);
     setRouteStart(null);
@@ -475,6 +687,8 @@ export default function MapPage() {
     setRouteStart(null);
     setRouteEnd(null);
     setSelectedPlace(null);
+    setSearchResultLabel(undefined);
+    setAruodasParse(null);
     setPanelOpen(false);
     setBusStops([]);
   };
@@ -487,8 +701,8 @@ export default function MapPage() {
 
     try {
       const [latlng1, latlng2] = await Promise.all([
-        geocode(compQuery1),
-        geocode(compQuery2)
+        resolveLocationInput(compQuery1),
+        resolveLocationInput(compQuery2)
       ]);
 
       if (!latlng1 || !latlng2) {
@@ -496,14 +710,14 @@ export default function MapPage() {
         return;
       }
 
-      setCompPlace1({ latlng: latlng1, name: compQuery1 });
-      setCompPlace2({ latlng: latlng2, name: compQuery2 });
+      setCompPlace1({ latlng: latlng1.latlng, name: latlng1.label });
+      setCompPlace2({ latlng: latlng2.latlng, name: latlng2.label });
 
       setIsComparing(true);
 
       const [res1, res2] = await Promise.all([
-          fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng1.lat}&lon=${latlng1.lng}`),
-          fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng2.lat}&lon=${latlng2.lng}`)
+          fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng1.latlng.lat}&lon=${latlng1.latlng.lng}`),
+          fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng2.latlng.lat}&lon=${latlng2.latlng.lng}`)
         ]);
 
       if (res1.ok) setPlace1Analysis(await res1.json());
@@ -519,8 +733,8 @@ export default function MapPage() {
         return Math.round(100 - (match.combined / maxValue) * 100);
       };
 
-      setPlace1CrimeScore(calculateCrime(latlng1.lat, latlng1.lng));
-      setPlace2CrimeScore(calculateCrime(latlng2.lat, latlng2.lng));
+      setPlace1CrimeScore(calculateCrime(latlng1.latlng.lat, latlng1.latlng.lng));
+      setPlace2CrimeScore(calculateCrime(latlng2.latlng.lat, latlng2.latlng.lng));
 
     } catch (e) {
       console.error("Comparison fetch failed", e);
@@ -537,7 +751,15 @@ export default function MapPage() {
     setIsLoading(p => ({ ...p, elderships: true }));
     try {
       const res = await fetch(`${API_URL}/api/Eldership`);
-      setElderships(await res.json());
+      const data: unknown = await res.json();
+      const parsed = Array.isArray(data) ? data.map((value): EldershipFeature => {
+        const item = isRecord(value) ? value : {};
+        return {
+          eldership_Name: readString(item.eldership_Name ?? item.Eldership_Name ?? item.name),
+          geometry: safeJsonParse<GeoJsonObject>(item.geometry ?? item.Geometry),
+        };
+      }) : [];
+      setElderships(parsed);
     } catch (e) { console.error(e); }
     setIsLoading(p => ({ ...p, elderships: false }));
   };
@@ -547,16 +769,17 @@ export default function MapPage() {
     setIsLoading(p => ({ ...p, crimes: true }));
     try {
       const res = await fetch(`${API_URL}/api/Crimegrid/by-eldership`);
-      const data = await res.json();
-      const normalized = Array.isArray(data) ? data.map((item: any) => {
-        const geometry = safeJsonParse(item.Geometry ?? item.geometry);
+      const data: unknown = await res.json();
+      const normalized = Array.isArray(data) ? data.map((value): CrimeByEldership => {
+        const item = isRecord(value) ? value : {};
+        const geometry = safeJsonParse<GeoJsonObject>(item.Geometry ?? item.geometry);
         return {
-          eldership_Id: item.Eldership_Id ?? item.eldership_Id ?? item.eldership_id,
-          eldership_Name: item.Eldership_Name ?? item.eldership_Name ?? item.eldership_name ?? item.name ?? "",
-          City_id: item.City_id ?? item.city_Id ?? item.cityId ?? item.city_id,
-          Health_total: Number(item.Health ?? item.health_Total ?? item.Health_Total ?? item.Health_total ?? item.health_total ?? 0),
-          Theft_total: Number(item.Theft ?? item.theft_Total ?? item.Theft_Total ?? item.Theft_total ?? item.theft_total ?? 0),
-          All_total: Number(item.Total ?? item.all_Total ?? item.All_Total ?? item.All_total ?? item.all_total ?? 0),
+          eldership_Id: readId(item.Eldership_Id, item.eldership_Id, item.eldership_id),
+          eldership_Name: readString(item.Eldership_Name ?? item.eldership_Name ?? item.eldership_name ?? item.name),
+          City_id: readId(item.City_id, item.city_Id, item.cityId, item.city_id),
+          Health_total: readNumber(item.Health ?? item.health_Total ?? item.Health_Total ?? item.Health_total ?? item.health_total),
+          Theft_total: readNumber(item.Theft ?? item.theft_Total ?? item.Theft_Total ?? item.Theft_total ?? item.theft_total),
+          All_total: readNumber(item.Total ?? item.all_Total ?? item.All_Total ?? item.All_total ?? item.all_total),
           geometry,
           Geometry: geometry,
         };
@@ -570,37 +793,23 @@ export default function MapPage() {
     if (schools.length > 0) return setSchools([]);
     try {
       const res = await fetch(`${API_URL}/api/School`);
-      const raw = await res.json();
-      const parsed = raw.map((s: any) => ({
-        school_Id: s.school_id,
-        name: s.name,
-        rating: s.rating,
-        type: normalizeSchoolType(s.Type ?? s.type ?? s.Tipas ?? s.tipas),
-        location: safeJsonParse(s.location)
-      }));
+      const raw: unknown = await res.json();
+      const parsed = Array.isArray(raw) ? raw.map((value): SchoolFeature => {
+        const s = isRecord(value) ? value : {};
+        return {
+          school_Id: readId(s.school_id, s.School_Id, s.school_Id, s.id) ?? readString(s.Name ?? s.name, "school"),
+          name: readString(s.Name ?? s.name, "Mokykla"),
+          rating: readNumber(s.Rating ?? s.rating),
+          type: normalizeSchoolType(s.Type ?? s.type ?? s.Tipas ?? s.tipas),
+          cityId: readNumber(s.City_Id ?? s.city_Id ?? s.cityId ?? s.city_id, 0) || undefined,
+          location: safeJsonParse<Point>(s.Location ?? s.location),
+        };
+      }) : [];
       setSchools(parsed);
     } catch (err) { console.error(err); }
   };
 
-  const loadPolice = async () => {
-    if (police.length > 0) return police;
-    try {
-      const res = await fetch(`${API_URL}/api/Police`);
-      const raw = await res.json();
-      const parsed = raw.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        geo: safeJsonParse(p.point)
-      }));
-      setPolice(parsed);
-      return parsed;
-    } catch (err) {
-      console.error("Failed to load police", err);
-      return [];
-    }
-  };
-
-  const processedCrimeData = useMemo(() => {
+  const processedCrimeData = useMemo<ProcessedCrimeData[]>(() => {
     return crimeByEldership.map((e) => ({
       ...e,
       combined: (selectedCrimes.hp ? e.Health_total : 0) + (selectedCrimes.th ? e.Theft_total : 0)
@@ -611,16 +820,18 @@ export default function MapPage() {
   const getCrimeColor = (norm: number) => norm > 0.8 ? "#800026" : norm > 0.6 ? "#BD0026" : norm > 0.4 ? "#E31A1C" : norm > 0.2 ? "#FC4E2A" : "#FFEDA0";
 
   const filteredSchools = useMemo(() => {
-    return schools.filter((s) => {
+    const cityId = cityIdByName[city];
+    return schools.filter((s): s is SchoolFeature & { location: Point } => {
       const type = s.type as SchoolType | null;
       const rating = Number(s.rating ?? 0);
-      return type !== null && selectedSchoolTypes[type] && rating >= minSchoolRating;
+      const matchesCity = cityId ? s.cityId === cityId : true;
+      return matchesCity && type !== null && selectedSchoolTypes[type] && rating >= minSchoolRating && s.location !== null;
     });
-  }, [schools, selectedSchoolTypes, minSchoolRating]);
+  }, [city, schools, selectedSchoolTypes, minSchoolRating]);
   
-  const calculateCrimeTotal = (eldership: any) => {
+  const calculateCrimeTotal = useCallback((eldership: CrimeByEldership | ProcessedCrimeData) => {
     return (selectedCrimes.hp ? eldership.Health_total : 0) + (selectedCrimes.th ? eldership.Theft_total : 0);
-  };
+  }, [selectedCrimes]);
 
   useEffect(() => {
     if (crimeLayerRef.current && selectedCrimeEldership) {
@@ -640,7 +851,7 @@ export default function MapPage() {
         crimeLayerRef.current?.off('popupclose', closeHandler);
       };
     }
-  }, [selectedCrimeEldership, selectedCrimes]);
+  }, [selectedCrimeEldership, calculateCrimeTotal]);
 
   const crimeSafetyScore = useMemo<number | null>(() => {
     if (!selectedPlace || processedCrimeData.length === 0) return null;
@@ -671,9 +882,16 @@ export default function MapPage() {
             <ArrowLeft size={18} /> Atgal
           </button>
           <div className="glass-panel search-box">
-            <input type="text" placeholder={`${city} adresas...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} />
+            <input type="text" placeholder={`${city} adresas arba Aruodas nuoroda...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} />
             <button onClick={handleSearch} disabled={isLoading.search}>{isLoading.search ? "..." : <Search size={18} />}</button>
           </div>
+          {aruodasParse && (
+            <div className="glass-panel aruodas-parse-pill">
+              <span>🏠</span>
+              <strong>{aruodasParse.display}</strong>
+              <em>{aruodasParse.confidence === "high" ? "tikslu" : "tikrinama"}</em>
+            </div>
+          )}
           {selectedPlace && (
             <div className="glass-panel search-box">
               <input type="text" placeholder="Tikslo adresas..." value={destQuery} onChange={(e) => setDestQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRouteSearch()} />
@@ -780,6 +998,7 @@ export default function MapPage() {
           <LocationMarker
             customIcon={customIcon}
             externalPosition={searchTarget}
+            externalLabel={searchResultLabel}
             onPlaceSelected={(place) => setSelectedPlace(place)}
             onDoubleClickResult={handleDoubleClickResult}
             onClickClear={handleClickClear}
@@ -789,25 +1008,29 @@ export default function MapPage() {
 
           {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
 
-          {elderships.map((e, i) => (
-            <GeoJSON key={`eldership-${i}`} data={safeJsonParse(e.geometry)} style={{ color: "#3b82f6", weight: 2, fillOpacity: 0.03, dashArray: '5, 5' }}
+          {elderships.map((e, i) => e.geometry ? (
+            <GeoJSON key={`eldership-${i}`} data={e.geometry} style={{ color: "#3b82f6", weight: 2, fillOpacity: 0.03, dashArray: '5, 5' }}
             onEachFeature={(_, layer) => layer.bindPopup(`<strong style="font-family:'Inter',sans-serif;font-size:15px;">${e.eldership_Name}</strong>`)}  />
-          ))}
+          ) : null)}
           
-          {processedCrimeData.map((e, i) => (
-            <GeoJSON
-              key={`crime-${i}`}
-              data={safeJsonParse(e.geometry || e.Geometry)}
-              style={{ fillColor: getCrimeColor(e.combined / maxValue), color: "white", weight: 1.5, opacity: 0.9, fillOpacity: 0.6 }}
-              onEachFeature={(_, layer) => {
-                layer.on('click', () => { crimeLayerRef.current = layer; setSelectedCrimeEldership(e); });
-              }}
-            />
-          ))}
+          {processedCrimeData.map((e, i) => {
+            const geometry = e.geometry ?? e.Geometry;
+            if (!geometry) return null;
+            return (
+              <GeoJSON
+                key={`crime-${i}`}
+                data={geometry}
+                style={{ fillColor: getCrimeColor(e.combined / maxValue), color: "white", weight: 1.5, opacity: 0.9, fillOpacity: 0.6 }}
+                onEachFeature={(_, layer) => {
+                  layer.on('click', () => { crimeLayerRef.current = layer; setSelectedCrimeEldership(e); });
+                }}
+              />
+            );
+          })}
 
           {MAP_FEATURES.map(config => {
             if (!activeFeatures[config.id] || !featureLayers[config.id]) return null;
-            return featureLayers[config.id].map((feature: any, i: number) => {
+            return featureLayers[config.id].map((feature, i) => {
               const centerPoint = getFeatureCenter(feature.geometry);
               if (!centerPoint) return null;
               return (
@@ -852,10 +1075,10 @@ export default function MapPage() {
                     {loadingArrivals ? <p className="text-sm text-slate-400 italic">Kraunama...</p> : stopArrivals.length > 0 ? (
                       <ul className="flex flex-col gap-1 p-0 m-0 list-none">
                         {stopArrivals.map((a, idx) => (
-                          <li key={idx} className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors" onClick={(e) => { e.stopPropagation(); handleShowPath(a.shapeId); }}>
+                          <li key={idx} className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors" onClick={(e) => { e.stopPropagation(); if (a.shapeId) handleShowPath(a.shapeId); }}>
                             <span className="bg-blue-600 text-white font-bold text-xs py-1 px-2 rounded">{a.route}</span>
                             <div className="flex flex-col">
-                              <strong className="text-slate-900 text-sm leading-tight">{a.time.substring(0, 5)}</strong>
+                              <strong className="text-slate-900 text-sm leading-tight">{a.time?.substring(0, 5) || "--:--"}</strong>
                               <span className="text-slate-500 text-xs leading-tight truncate max-w-[120px]">{a.destination}</span>
                             </div>
                           </li>
@@ -877,8 +1100,7 @@ export default function MapPage() {
             </Marker>
           ))}
 
-          {searchTarget && <Marker position={searchTarget} icon={customIcon} />}
-          <MapController target={searchTarget} clearTarget={() => setSearchTarget(null)} />
+          <MapController target={searchTarget} />
         </MapContainer>
 
         {/* SIDE PANEL */}
@@ -958,7 +1180,7 @@ export default function MapPage() {
                       <div className="text-xs text-slate-500 font-medium leading-relaxed">Paskaičiuota pagal atstumus iki būtiniausių paslaugų (iki 1km).</div>
                     </div>
                     <ul className="flex flex-col gap-2.5 p-0 m-0 list-none">
-                      {accessibilityData.features.map((feature: any, idx: number) => (
+                      {accessibilityData.features.map((feature, idx) => (
                         <li key={idx} className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                           <div className="flex items-center gap-3">
                             <span className="text-2xl bg-slate-50 p-1.5 rounded-lg">{feature.icon}</span>
@@ -1037,7 +1259,7 @@ export default function MapPage() {
 
               {place1Analysis && (
                 <ul className="flex flex-col gap-3 m-0 p-0 list-none">
-                  {place1Analysis.features.map((f: any, i: number) => (
+                  {place1Analysis.features.map((f, i) => (
                     <li key={i} className="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl bg-slate-50 p-2 rounded-lg">{f.icon}</span>
@@ -1074,7 +1296,7 @@ export default function MapPage() {
 
               {place2Analysis && (
                 <ul className="flex flex-col gap-3 m-0 p-0 list-none">
-                  {place2Analysis.features.map((f: any, i: number) => (
+                  {place2Analysis.features.map((f, i) => (
                     <li key={i} className="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl bg-slate-50 p-2 rounded-lg">{f.icon}</span>

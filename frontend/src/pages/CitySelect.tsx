@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Search, Shield, Bus, School,  ArrowRight } from "lucide-react";
 import "./CitySelect.css";
@@ -29,6 +30,7 @@ export default function CitySelect() {
           <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-500">
             <a href="#features" className="hover:text-blue-600 transition-colors">Savybės</a>
             <a href="#search" className="hover:text-blue-600 transition-colors">Analizė</a>
+            <Link to="/analytics" className="hover:text-blue-600 transition-colors">Analytics Hub</Link>
             <button className="bg-slate-900 text-white px-5 py-2.5 rounded-full hover:bg-blue-600 transition-all">
               Prisijungti
             </button>
@@ -147,7 +149,7 @@ export default function CitySelect() {
 }
 
 // Pagalbinis komponentas kortelėms
-function FeatureCard({ icon, title, desc }: { icon: any, title: string, desc: string }) {
+function FeatureCard({ icon, title, desc }: { icon: ReactNode, title: string, desc: string }) {
   return (
     <div className="bg-white p-8 rounded-[2rem] border border-slate-200/60 hover:shadow-2xl hover:shadow-slate-200 transition-all duration-500 group">
       <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">

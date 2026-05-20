@@ -21,6 +21,7 @@ if (!string.IsNullOrEmpty(localPassword))
 }
 
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<GeocodingService>();
 builder.Services.AddScoped<AruodasScraperService>();
 

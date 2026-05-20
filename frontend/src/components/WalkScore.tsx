@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LatLng } from "leaflet";
 import { fetchWalkScore } from "../utils/walkscore";
 
@@ -15,43 +15,46 @@ interface WalkScoreProps {
   onScore?: (score: number | null) => void;
 }
 
+interface WalkScoreState {
+  key: string;
+  score: number | null;
+  error: string | null;
+}
+
 export default function WalkScore({ latlng, onScore }: WalkScoreProps) {
-  const [score, setScore] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const pointKey = useMemo(() => (latlng ? `${latlng.lat.toFixed(6)},${latlng.lng.toFixed(6)}` : ""), [latlng]);
+  const [result, setResult] = useState<WalkScoreState>({ key: "", score: null, error: null });
 
   useEffect(() => {
     if (!latlng) {
-      setScore(null);
-      setError(null);
       onScore?.(null);
       return;
     }
 
     let cancelled = false;
-    setScore(null);
-    setError(null);
 
     fetchWalkScore(latlng.lat, latlng.lng)
       .then((data) => {
         if (!cancelled) {
-          setScore(data.score);
+          setResult({ key: pointKey, score: data.score, error: null });
           onScore?.(data.score);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setError("Nepavyko gauti duomenų");
+          setResult({ key: pointKey, score: null, error: "Nepavyko gauti duomenų" });
           onScore?.(null);
         }
       });
 
-    return () => { cancelled = true; };
-  }, [latlng?.lat, latlng?.lng]);
+    return () => {
+      cancelled = true;
+    };
+  }, [latlng, onScore, pointKey]);
 
-  if (error) return <p>{error}</p>;
-  if (score === null) return null;
+  if (!latlng || result.key !== pointKey) return null;
+  if (result.error) return <p>{result.error}</p>;
+  if (result.score === null) return null;
 
-  return (
-    <p>Vaikščiojamumo balas: {score}/100 — {scoreLabel(score)}</p>
-  );
+  return <p>Vaikščiojamumo balas: {result.score}/100 - {scoreLabel(result.score)}</p>;
 }

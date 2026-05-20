@@ -109,6 +109,33 @@
 
 .search-box button:hover { background: #2563eb; }
 
+.aruodas-parse-pill {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  max-width: 340px;
+  padding: 10px 14px;
+  background: rgba(236, 253, 245, 0.92);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.aruodas-parse-pill strong {
+  overflow: hidden;
+  color: #065f46;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aruodas-parse-pill em {
+  color: #047857;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 /* Sluoksnių kontrolė */
 .layer-controls h3 {
   margin: 0 0 16px 0;

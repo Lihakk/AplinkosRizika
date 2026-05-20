@@ -11,6 +11,7 @@ interface SelectedPlace {
 interface LocationMarkerProps {
   customIcon: Icon;
   externalPosition: LatLng | null;
+  externalLabel?: string;
   onPlaceSelected: (place: SelectedPlace | null) => void;
   onDoubleClickResult: (latlng: LatLng, address: string) => void;
   onClickClear: () => void;
@@ -21,6 +22,7 @@ interface LocationMarkerProps {
 export default function LocationMarker({
   customIcon,
   externalPosition,
+  externalLabel,
   onPlaceSelected,
   onDoubleClickResult,
   onClickClear,
@@ -80,10 +82,11 @@ export default function LocationMarker({
       (!prevExternal.current || !prevExternal.current.equals(externalPosition))
     ) {
       prevExternal.current = externalPosition;
-      setPosition(externalPosition);
-      onPlaceSelected({ latlng: externalPosition, name: "Paieškos rezultatas" });
+      onPlaceSelected({ latlng: externalPosition, name: externalLabel ?? "Paieškos rezultatas" });
     }
-  }, [externalPosition]);
+  }, [externalPosition, externalLabel, onPlaceSelected]);
 
-  return position ? <Marker position={position} icon={customIcon} /> : null;
+  const markerPosition = externalPosition ?? position;
+
+  return markerPosition ? <Marker position={markerPosition} icon={customIcon} /> : null;
 }
