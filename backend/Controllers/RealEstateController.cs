@@ -12,7 +12,8 @@ public class RealEstateController : ControllerBase
 
     public RealEstateController(IConfiguration configuration, AruodasScraperService scraper)
     {
-        _connectionString = configuration.GetConnectionString("Postgres");
+        _connectionString = configuration.GetConnectionString("Postgres")
+            ?? throw new InvalidOperationException("Missing Postgres connection string.");
         _scraper = scraper;
     }
 
