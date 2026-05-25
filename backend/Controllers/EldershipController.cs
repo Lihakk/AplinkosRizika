@@ -15,24 +15,34 @@ public class EldershipController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int? cityId = null)
     {
     try
     {    
-        var data = await _db.Elderships
-        .FromSqlRaw(@"
+        var sql = @"
             SELECT 
                 ""eldership_id"",
                 ""eldership_name"",
                 ST_AsGeoJSON(ST_Transform(""geometry"", 4326)) AS ""geometry""
-            FROM ""elderships""
-        ")
-        .Select(e => new {
-            e.Eldership_Id,
-            e.Eldership_Name,
-            e.Geometry 
-        })
-        .ToListAsync();
+            FROM ""elderships""";
+
+        var data = cityId.HasValue
+            ? await _db.Elderships
+                .FromSqlRaw(sql + @" WHERE ""city_id"" = {0}", cityId.Value)
+                .Select(e => new {
+                    e.Eldership_Id,
+                    e.Eldership_Name,
+                    e.Geometry 
+                })
+                .ToListAsync()
+            : await _db.Elderships
+                .FromSqlRaw(sql)
+                .Select(e => new {
+                    e.Eldership_Id,
+                    e.Eldership_Name,
+                    e.Geometry 
+                })
+                .ToListAsync();
 
         return Ok(data);
         }catch (Exception ex)

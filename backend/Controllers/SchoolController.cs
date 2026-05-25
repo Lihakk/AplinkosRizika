@@ -15,10 +15,9 @@ public class SchoolController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int? cityId = null)
     {
-        var data = await _db.Schools
-        .FromSqlRaw(@"
+        var sql = @"
             SELECT 
                 ""name"",
                 ""rating"",
@@ -26,17 +25,31 @@ public class SchoolController : ControllerBase
                 ""city_id"",
                 ""tipas"",
                 ""school_id""
-            FROM ""schools""
-        ")
-        .Select(s => new {
-            s.Name,
-            s.Rating,
-            s.Location,
-            s.City_Id,
-            s.Type,
-            s.School_Id,
-        })
-        .ToListAsync();
+            FROM ""schools""";
+
+        var data = cityId.HasValue
+            ? await _db.Schools
+                .FromSqlRaw(sql + @" WHERE ""city_id"" = {0}", cityId.Value)
+                .Select(s => new {
+                    s.Name,
+                    s.Rating,
+                    s.Location,
+                    s.City_Id,
+                    s.Type,
+                    s.School_Id,
+                })
+                .ToListAsync()
+            : await _db.Schools
+                .FromSqlRaw(sql)
+                .Select(s => new {
+                    s.Name,
+                    s.Rating,
+                    s.Location,
+                    s.City_Id,
+                    s.Type,
+                    s.School_Id,
+                })
+                .ToListAsync();
 
         return Ok(data);
     }

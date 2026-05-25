@@ -196,6 +196,11 @@ const cityIdByName: Record<string, number> = {
   Vilnius: 2,
 };
 
+const cityIds: Record<string, number> = {
+  Kaunas: 1,
+  Vilnius: 2,
+};
+
 const expandBounds = (bounds: LatLngBounds, factor: number) => {
   const sw = bounds.getSouthWest();
   const ne = bounds.getNorthEast();
@@ -367,6 +372,7 @@ export default function MapPage() {
   const navigate = useNavigate();
   const rawCity = params.get("city")?.trim() || "Kaunas";
   const city = cityCoordinates[rawCity] ? rawCity : "Kaunas";
+  const cityId = cityIds[city] ?? 1;
   const cityCenter = cityCoordinates[city];
   const cityBounds = cityBoundsMap[city] || cityBoundsMap["Kaunas"];
   
@@ -425,6 +431,7 @@ export default function MapPage() {
 
   const [featureLayers, setFeatureLayers] = useState<Record<string, MapFeature[]>>({});
   const [activeFeatures, setActiveFeatures] = useState<Record<string, boolean>>({});
+  const [layersPanelCollapsed, setLayersPanelCollapsed] = useState(false);
 
   const [selectedCrimeEldership, setSelectedCrimeEldership] = useState<CrimeByEldership | null>(null);
   const crimeLayerRef = useRef<L.Layer | null>(null);
@@ -750,7 +757,7 @@ export default function MapPage() {
     if (elderships.length > 0) return setElderships([]);
     setIsLoading(p => ({ ...p, elderships: true }));
     try {
-      const res = await fetch(`${API_URL}/api/Eldership`);
+      const res = await fetch(`${API_URL}/api/Eldership?cityId=${cityId}`);
       const data: unknown = await res.json();
       const parsed = Array.isArray(data) ? data.map((value): EldershipFeature => {
         const item = isRecord(value) ? value : {};
@@ -768,7 +775,7 @@ export default function MapPage() {
     if (crimeByEldership.length > 0) return setCrimeByEldership([]);
     setIsLoading(p => ({ ...p, crimes: true }));
     try {
-      const res = await fetch(`${API_URL}/api/Crimegrid/by-eldership`);
+      const res = await fetch(`${API_URL}/api/Crimegrid/by-eldership?cityId=${cityId}`);
       const data: unknown = await res.json();
       const normalized = Array.isArray(data) ? data.map((value): CrimeByEldership => {
         const item = isRecord(value) ? value : {};
@@ -792,7 +799,7 @@ export default function MapPage() {
   const toggleSchools = async () => {
     if (schools.length > 0) return setSchools([]);
     try {
-      const res = await fetch(`${API_URL}/api/School`);
+      const res = await fetch(`${API_URL}/api/School?cityId=${cityId}`);
       const raw: unknown = await res.json();
       const parsed = Array.isArray(raw) ? raw.map((value): SchoolFeature => {
         const s = isRecord(value) ? value : {};
@@ -914,66 +921,90 @@ export default function MapPage() {
           </div>
         </div>
       
-        {/* RIGHT UI: Layer Controls */}
-        <div className="floating-ui top-right">
-          <div className="glass-panel layer-controls">
+
+      {/* RIGHT UI: Layer Controls */}
+      <div className={`floating-ui top-right ${layersPanelCollapsed ? 'collapsed' : ''}`}>
+        <div className={`glass-panel layer-controls ${layersPanelCollapsed ? 'collapsed' : ''}`}>
+          <div className="layer-controls-header">
             <h3>Sluoksniai</h3>
-            <button className={`layer-btn ${elderships.length ? 'active' : ''}`} onClick={toggleElderships}><MapIcon size={18} /> Seniūnijos</button>
-            <button className={`layer-btn ${crimeByEldership.length ? 'active' : ''}`} onClick={toggleCrimes}><ShieldAlert size={18} /> Nusikalstamumas</button>
-            <button className={`layer-btn ${schools.length ? 'active' : ''}`} onClick={toggleSchools}><School size={18} /> Mokyklos</button>
-            <button className={`layer-btn ${showingPolice ? 'active' : ''}`} onClick={() => {
-                if (showingPolice) hidePolice();
-                else if (selectedPlace) showClosestPolice(selectedPlace.latlng);
-                else if (searchTarget) showClosestPolice(searchTarget);
-                else alert("Pasirinkite vietą žemėlapyje");
-              }}
+            <button
+              className="collapse-panel-btn"
+              onClick={() => setLayersPanelCollapsed((prev) => !prev)}
+              title={layersPanelCollapsed ? 'Atidaryti sluoksnius' : 'Sumažinti sluoksnius'}
             >
-              👮 {showingPolice ? 'Slėpti policiją' : 'Artimiausia policija'}
+              {layersPanelCollapsed ? '+' : '−'}
             </button>
-
-            <hr style={{ margin: '16px 0', borderColor: '#e2e8f0', borderTop: '1px solid' }} />
-            
-            {MAP_FEATURES.map(feature => (
-              <button 
-                key={feature.id}
-                className={`layer-btn ${activeFeatures[feature.id] ? 'active' : ''}`} 
-                onClick={() => toggleNewFeature(feature.id)}
-              >
-                <span className="text-lg">{feature.icon}</span> {feature.label}
-              </button>
-            ))}
-
-            {crimeByEldership.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-200 text-sm flex flex-col gap-2">
-                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700 hover:text-slate-900"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={selectedCrimes.hp} onChange={() => setSelectedCrimes(p => ({ ...p, hp: !p.hp }))} /> Sveikata</label>
-                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700 hover:text-slate-900"><input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={selectedCrimes.th} onChange={() => setSelectedCrimes(p => ({ ...p, th: !p.th }))} /> Vagystės</label>
-              </div>
-            )}
-
-            {schools.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-200 text-sm">
-                <div className="flex flex-col gap-2 mb-4">
-                  <div className="font-semibold text-slate-900 mb-1">Mokyklos tipas</div>
-                  {SCHOOL_TYPES.map((type) => (
-                    <label key={type} className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900">
-                      <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked={selectedSchoolTypes[type]} onChange={() => setSelectedSchoolTypes(p => ({ ...p, [type]: !p[type] }))} />
-                      {SCHOOL_TYPE_LABELS[type]}
-                    </label>
-                  ))}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="flex items-center justify-between font-semibold text-slate-900">
-                    <span>Min. reitingas</span>
-                    <select className="bg-slate-50 border border-slate-200 text-slate-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5" value={minSchoolRating} onChange={(e) => setMinSchoolRating(Number(e.target.value))}>
-                      {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
-                        <option key={value} value={value}>{value}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              </div>
-            )}
           </div>
+
+          {!layersPanelCollapsed && (
+            <>
+              <button className={`layer-btn ${elderships.length ? 'active' : ''}`} onClick={toggleElderships}><MapIcon size={16} /> Seniūnijos</button>
+              <button className={`layer-btn ${crimeByEldership.length ? 'active' : ''}`} onClick={toggleCrimes}><ShieldAlert size={16} /> Nusikalstamumas</button>
+              <button className={`layer-btn ${schools.length ? 'active' : ''}`} onClick={toggleSchools}><School size={16} /> Mokyklos</button>
+              <button className={`layer-btn ${showingPolice ? 'active' : ''}`} onClick={() => {
+                  if (showingPolice) {
+                    hidePolice();
+                    return;
+                  }
+
+                  if (selectedPlace) showClosestPolice(selectedPlace.latlng);
+                  else if (searchTarget) showClosestPolice(searchTarget);
+                  else alert("Pasirinkite vietą žemėlapyje");
+                }}
+              >
+                {showingPolice ? '👮 Slėpti policiją' : '👮 Artimiausia policija'}
+              </button>
+
+              <hr style={{ margin: '10px 0', borderColor: 'rgba(0,0,0,0.1)' }} />
+              
+              {MAP_FEATURES.map(feature => (
+                <button 
+                  key={feature.id}
+                  className={`layer-btn ${activeFeatures[feature.id] ? 'active' : ''}`} 
+                  onClick={() => toggleNewFeature(feature.id)}
+                >
+                  {feature.label}
+                </button>
+              ))}
+
+              {crimeByEldership.length > 0 && (
+                <div className="crime-filters">
+                  <hr />
+                  <label><input type="checkbox" checked={selectedCrimes.hp} onChange={() => setSelectedCrimes(p => ({ ...p, hp: !p.hp }))} /> Sveikata</label>
+                  <label><input type="checkbox" checked={selectedCrimes.th} onChange={() => setSelectedCrimes(p => ({ ...p, th: !p.th }))} /> Vagystės</label>
+                </div>
+              )}
+
+              {schools.length > 0 && (
+                <div className="school-filters">
+                  <hr />
+                  <div className="school-filter-group">
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>Mokyklos tipas</div>
+                    {SCHOOL_TYPES.map((type) => (
+                      <label key={type}>
+                        <input
+                          type="checkbox"
+                          checked={selectedSchoolTypes[type]}
+                          onChange={() => setSelectedSchoolTypes(p => ({ ...p, [type]: !p[type] }))}
+                        />
+                        {SCHOOL_TYPE_LABELS[type]}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="school-filter-group">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 600 }}>Min. reitingas</span>
+                      <select value={minSchoolRating} onChange={(e) => setMinSchoolRating(Number(e.target.value))}>
+                        {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
+                          <option key={value} value={value}>{value}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <MapContainer

@@ -44,10 +44,9 @@ public class CrimegridController : ControllerBase
     }
 
     [HttpGet("by-eldership")]
-    public async Task<IActionResult> GetCrimeGridByEldership()
+    public async Task<IActionResult> GetCrimeGridByEldership([FromQuery] int? cityId = null)
     {
-        var data = await _db.CrimeByEldership
-            .FromSqlRaw(@"
+        var baseSql = @"
                 SELECT 
                     e.""eldership_id"" AS ""Eldership_Id"",
                     e.""eldership_name"" AS ""Eldership_Name"",
@@ -67,11 +66,20 @@ public class CrimegridController : ControllerBase
                     ON c.""id"" = g.""id""
 
                 WHERE c.""period"" = 'M'
-                AND c.""year"" = 2025
+                AND c.""year"" = 2025";
 
-                GROUP BY e.""eldership_id"", e.""eldership_name"", e.""geometry""
-            ")
-            .ToListAsync();
+        var sql = baseSql;
+        if (cityId.HasValue)
+        {
+            sql += @" AND e.""city_id"" = {0}";
+        }
+        sql += @"
+
+                GROUP BY e.""eldership_id"", e.""eldership_name"", e.""geometry""";
+
+        var data = cityId.HasValue
+            ? await _db.CrimeByEldership.FromSqlRaw(sql, cityId.Value).ToListAsync()
+            : await _db.CrimeByEldership.FromSqlRaw(sql).ToListAsync();
 
         return Ok(data);
     }
