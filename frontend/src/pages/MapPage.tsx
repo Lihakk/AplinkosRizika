@@ -301,6 +301,7 @@ export default function MapPage() {
   // --- NEW STATE FOR ADDED FEATURES ---
   const [featureLayers, setFeatureLayers] = useState<Record<string, any[]>>({});
   const [activeFeatures, setActiveFeatures] = useState<Record<string, boolean>>({});
+  const [layersPanelCollapsed, setLayersPanelCollapsed] = useState(false);
 
   // --- CRIME ELDERSHIP POPUP STATE ---
   const [selectedCrimeEldership, setSelectedCrimeEldership] = useState<any>(null);
@@ -763,74 +764,87 @@ export default function MapPage() {
       
 
       {/* RIGHT UI: Layer Controls */}
-      <div className="floating-ui top-right">
-        <div className="glass-panel layer-controls">
-          <h3>Sluoksniai</h3>
-          <button className={`layer-btn ${elderships.length ? 'active' : ''}`} onClick={toggleElderships}><MapIcon size={16} /> Seniūnijos</button>
-          <button className={`layer-btn ${crimeByEldership.length ? 'active' : ''}`} onClick={toggleCrimes}><ShieldAlert size={16} /> Nusikalstamumas</button>
-          <button className={`layer-btn ${schools.length ? 'active' : ''}`} onClick={toggleSchools}><School size={16} /> Mokyklos</button>
-          <button className={`layer-btn ${showingPolice ? 'active' : ''}`} onClick={() => {
-              if (showingPolice) {
-                hidePolice();
-                return;
-              }
-
-              if (selectedPlace) showClosestPolice(selectedPlace.latlng);
-              else if (searchTarget) showClosestPolice(searchTarget);
-              else alert("Pasirinkite vietą žemėlapyje");
-            }}
-          >
-            {showingPolice ? '👮 Slėpti policiją' : '👮 Artimiausia policija'}
-          </button>
-
-          {/* --- NEW BUTTONS FOR YOUR JIRA TASKS --- */}
-          <hr style={{ margin: '10px 0', borderColor: 'rgba(0,0,0,0.1)' }} />
-          
-          {MAP_FEATURES.map(feature => (
-            <button 
-              key={feature.id}
-              className={`layer-btn ${activeFeatures[feature.id] ? 'active' : ''}`} 
-              onClick={() => toggleNewFeature(feature.id)}
+      <div className={`floating-ui top-right ${layersPanelCollapsed ? 'collapsed' : ''}`}>
+        <div className={`glass-panel layer-controls ${layersPanelCollapsed ? 'collapsed' : ''}`}>
+          <div className="layer-controls-header">
+            <h3>Sluoksniai</h3>
+            <button
+              className="collapse-panel-btn"
+              onClick={() => setLayersPanelCollapsed((prev) => !prev)}
+              title={layersPanelCollapsed ? 'Atidaryti sluoksnius' : 'Sumažinti sluoksnius'}
             >
-              {feature.label}
+              {layersPanelCollapsed ? '+' : '−'}
             </button>
-          ))}
+          </div>
 
-          {crimeByEldership.length > 0 && (
-            <div className="crime-filters">
-              <hr />
-              <label><input type="checkbox" checked={selectedCrimes.hp} onChange={() => setSelectedCrimes(p => ({ ...p, hp: !p.hp }))} /> Sveikata</label>
-              <label><input type="checkbox" checked={selectedCrimes.th} onChange={() => setSelectedCrimes(p => ({ ...p, th: !p.th }))} /> Vagystės</label>
-            </div>
-          )}
+          {!layersPanelCollapsed && (
+            <>
+              <button className={`layer-btn ${elderships.length ? 'active' : ''}`} onClick={toggleElderships}><MapIcon size={16} /> Seniūnijos</button>
+              <button className={`layer-btn ${crimeByEldership.length ? 'active' : ''}`} onClick={toggleCrimes}><ShieldAlert size={16} /> Nusikalstamumas</button>
+              <button className={`layer-btn ${schools.length ? 'active' : ''}`} onClick={toggleSchools}><School size={16} /> Mokyklos</button>
+              <button className={`layer-btn ${showingPolice ? 'active' : ''}`} onClick={() => {
+                  if (showingPolice) {
+                    hidePolice();
+                    return;
+                  }
 
-          {schools.length > 0 && (
-            <div className="school-filters">
-              <hr />
-              <div className="school-filter-group">
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>Mokyklos tipas</div>
-                {SCHOOL_TYPES.map((type) => (
-                  <label key={type}>
-                    <input
-                      type="checkbox"
-                      checked={selectedSchoolTypes[type]}
-                      onChange={() => setSelectedSchoolTypes(p => ({ ...p, [type]: !p[type] }))}
-                    />
-                    {SCHOOL_TYPE_LABELS[type]}
-                  </label>
-                ))}
-              </div>
-              <div className="school-filter-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: 600 }}>Min. reitingas</span>
-                  <select value={minSchoolRating} onChange={(e) => setMinSchoolRating(Number(e.target.value))}>
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
-                      <option key={value} value={value}>{value}</option>
+                  if (selectedPlace) showClosestPolice(selectedPlace.latlng);
+                  else if (searchTarget) showClosestPolice(searchTarget);
+                  else alert("Pasirinkite vietą žemėlapyje");
+                }}
+              >
+                {showingPolice ? '👮 Slėpti policiją' : '👮 Artimiausia policija'}
+              </button>
+
+              <hr style={{ margin: '10px 0', borderColor: 'rgba(0,0,0,0.1)' }} />
+              
+              {MAP_FEATURES.map(feature => (
+                <button 
+                  key={feature.id}
+                  className={`layer-btn ${activeFeatures[feature.id] ? 'active' : ''}`} 
+                  onClick={() => toggleNewFeature(feature.id)}
+                >
+                  {feature.label}
+                </button>
+              ))}
+
+              {crimeByEldership.length > 0 && (
+                <div className="crime-filters">
+                  <hr />
+                  <label><input type="checkbox" checked={selectedCrimes.hp} onChange={() => setSelectedCrimes(p => ({ ...p, hp: !p.hp }))} /> Sveikata</label>
+                  <label><input type="checkbox" checked={selectedCrimes.th} onChange={() => setSelectedCrimes(p => ({ ...p, th: !p.th }))} /> Vagystės</label>
+                </div>
+              )}
+
+              {schools.length > 0 && (
+                <div className="school-filters">
+                  <hr />
+                  <div className="school-filter-group">
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>Mokyklos tipas</div>
+                    {SCHOOL_TYPES.map((type) => (
+                      <label key={type}>
+                        <input
+                          type="checkbox"
+                          checked={selectedSchoolTypes[type]}
+                          onChange={() => setSelectedSchoolTypes(p => ({ ...p, [type]: !p[type] }))}
+                        />
+                        {SCHOOL_TYPE_LABELS[type]}
+                      </label>
                     ))}
-                  </select>
-                </label>
-              </div>
-            </div>
+                  </div>
+                  <div className="school-filter-group">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 600 }}>Min. reitingas</span>
+                      <select value={minSchoolRating} onChange={(e) => setMinSchoolRating(Number(e.target.value))}>
+                        {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
+                          <option key={value} value={value}>{value}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

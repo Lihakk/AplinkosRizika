@@ -11,8 +11,10 @@
 
 .map-wrapper {
   position: relative;
-  margin: 30px;
-  height: calc(100vh - 60px);
+  margin: 30px auto;
+  width: min(95%, 1400px);
+  max-width: 1400px;
+  height: min(70vh, 700px);
   border: 3px solid #9ca3af;
   border-radius: 16px;
   overflow: hidden;
@@ -43,6 +45,16 @@
   top: 45px;
   right: 45px;
   width: 250px;
+  max-height: 75%;
+  transition: all 0.25s ease;
+}
+
+.top-right.collapsed {
+  top: 15px;
+  right: 15px;
+  left: auto;
+  width: auto;
+  max-height: none;
 }
 
 .glass-panel, .glass-btn {
@@ -90,6 +102,67 @@
   border-radius: 8px;
   padding: 6px;
   cursor: pointer;
+}
+
+.layer-controls-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.layer-controls-header h3 {
+  margin: 0;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collapse-panel-btn {
+  border: none;
+  background: #f1f5f9;
+  color: #334155;
+  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background 0.2s ease;
+}
+
+.collapse-panel-btn:hover {
+  background: #e2e8f0;
+}
+
+.layer-controls {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.layer-controls.collapsed {
+  width: 56px;
+  padding: 8px;
+}
+
+.layer-controls.collapsed .layer-controls-header h3 {
+  display: none;
+}
+
+.layer-controls.collapsed .collapse-panel-btn {
+  width: 44px;
+  height: 44px;
+}
+
+.layer-controls.collapsed .layer-btn,
+.layer-controls.collapsed .crime-filters,
+.layer-controls.collapsed .school-filters,
+.layer-controls.collapsed hr {
+  display: none;
 }
 
 .layer-controls h3 {
