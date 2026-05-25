@@ -79,6 +79,11 @@ const cityCoordinates: Record<string, [number, number]> = {
   //"Panevėžys": [55.7348, 24.3575]
 };
 
+const cityIds: Record<string, number> = {
+  Kaunas: 1,
+  Vilnius: 2,
+};
+
 const expandBounds = (bounds: LatLngBounds, factor: number) => {
   const sw = bounds.getSouthWest();
   const ne = bounds.getNorthEast();
@@ -240,6 +245,7 @@ export default function MapPage() {
   const navigate = useNavigate();
   const rawCity = params.get("city")?.trim() || "Kaunas";
   const city = cityCoordinates[rawCity] ? rawCity : "Kaunas";
+  const cityId = cityIds[city] ?? 1;
   const cityCenter = cityCoordinates[city];
   const cityBounds = cityBoundsMap[city] || cityBoundsMap["Kaunas"];
   
@@ -581,7 +587,7 @@ export default function MapPage() {
     if (elderships.length > 0) return setElderships([]);
     setIsLoading(p => ({ ...p, elderships: true }));
     try {
-      const res = await fetch(`${API_URL}/api/Eldership`);
+      const res = await fetch(`${API_URL}/api/Eldership?cityId=${cityId}`);
       setElderships(await res.json());
     } catch (e) { console.error(e); }
     setIsLoading(p => ({ ...p, elderships: false }));
@@ -591,7 +597,7 @@ export default function MapPage() {
     if (crimeByEldership.length > 0) return setCrimeByEldership([]);
     setIsLoading(p => ({ ...p, crimes: true }));
     try {
-      const res = await fetch(`${API_URL}/api/Crimegrid/by-eldership`);
+      const res = await fetch(`${API_URL}/api/Crimegrid/by-eldership?cityId=${cityId}`);
       const data = await res.json();
       const normalized = Array.isArray(data) ? data.map((item: any) => {
         const geometry = safeJsonParse(item.Geometry ?? item.geometry);
@@ -615,7 +621,7 @@ export default function MapPage() {
   const toggleSchools = async () => {
     if (schools.length > 0) return setSchools([]);
     try {
-      const res = await fetch(`${API_URL}/api/School`);
+      const res = await fetch(`${API_URL}/api/School?cityId=${cityId}`);
       const raw = await res.json();
       const parsed = raw.map((s: any) => ({
         school_Id: s.school_id,
