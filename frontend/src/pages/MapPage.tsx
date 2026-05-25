@@ -172,10 +172,10 @@ const getPointCoordinates = (geometry: GeoJsonObject | null): [number, number] |
   return typeof lng === "number" && typeof lat === "number" ? [lng, lat] : null;
 };
 const API_URL = import.meta.env.VITE_API_URL || "http://144.24.247.126:5178";
-const customIcon = new Icon({ 
-  iconUrl: "./icons/placeholder.png", 
-  iconSize: [38, 38], 
-  iconAnchor: [19, 38] 
+const customIcon = new Icon({
+  iconUrl: "./icons/placeholder.png",
+  iconSize: [38, 38],
+  iconAnchor: [19, 38]
 });
 
 const busIcon = divIcon({
@@ -309,12 +309,12 @@ const getFeatureCenter = (geometry: GeoJsonObject | null): [number, number] | nu
   if (geometry.type === "Feature") {
     return getFeatureCenter((geometry as GeoJsonFeature).geometry);
   }
-  
+
   if (geometry.type === "Point") {
     const coordinates = getPointCoordinates(geometry);
     return coordinates ? [coordinates[1], coordinates[0]] : null;
   }
-  
+
   if (geometry.type === "Polygon") {
     return getRingCenter((geometry as Polygon).coordinates[0]);
   }
@@ -322,7 +322,7 @@ const getFeatureCenter = (geometry: GeoJsonObject | null): [number, number] | nu
   if (geometry.type === "MultiPolygon") {
     return getRingCenter((geometry as MultiPolygon).coordinates[0][0]);
   }
-  
+
   return null;
 };
 
@@ -375,7 +375,7 @@ export default function MapPage() {
   const cityId = cityIds[city] ?? 1;
   const cityCenter = cityCoordinates[city];
   const cityBounds = cityBoundsMap[city] || cityBoundsMap["Kaunas"];
-  
+
   const mapRef = useRef<L.Map | null>(null);
 
   const [searchTarget, setSearchTarget] = useState<LatLng | null>(null);
@@ -533,7 +533,7 @@ export default function MapPage() {
       const center = mapRef.current?.getCenter() || { lat: cityCenter[0], lng: cityCenter[1] };
       const res = await fetch(`${API_URL}/api/MapFeatures/${endpoint}?lat=${center.lat}&lon=${center.lng}`);
       const data: unknown = await res.json();
-      
+
       const parsedData: MapFeature[] = Array.isArray(data) ? data.map((value) => {
         const item = isRecord(value) ? value : {};
         return {
@@ -577,7 +577,7 @@ export default function MapPage() {
 
   const handleStopClick = async (lat: number, lon: number) => {
     setLoadingArrivals(true);
-    setStopArrivals([]); 
+    setStopArrivals([]);
     setStopRoutes([]);
     try {
       const arrRes = await fetch(`${API_URL}/api/Transport/stop-arrivals?lat=${lat}&lon=${lon}`);
@@ -591,7 +591,7 @@ export default function MapPage() {
           destination: readString(item.destination),
         };
       }) : []);
-      
+
       const routeRes = await fetch(`${API_URL}/api/Transport/stop-routes?lat=${lat}&lon=${lon}`);
       const routeData: unknown = await routeRes.json();
       setStopRoutes(Array.isArray(routeData) ? routeData.map((value): StopRoute => {
@@ -601,7 +601,7 @@ export default function MapPage() {
           destination: readString(item.destination),
         };
       }) : []);
-      
+
       const freqRes = await fetch(`${API_URL}/api/Transport/stop-frequency?lat=${lat}&lon=${lon}`);
       const freqData: unknown = await freqRes.json();
       setStopFrequency(Array.isArray(freqData) ? freqData.map((value): StopFrequencyPoint => {
@@ -611,20 +611,20 @@ export default function MapPage() {
           count: readNumber(item.count ?? item.Count),
         };
       }) : []);
-    } catch (e) { 
-      console.error(e); 
-    } finally { 
-      setLoadingArrivals(false); 
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingArrivals(false);
     }
   };
 
   const handleShowPath = async (shapeId: string) => {
     if (!shapeId) return;
-    setSelectedPath(null); 
+    setSelectedPath(null);
     try {
       const res = await fetch(`${API_URL}/api/Transport/route-path/${shapeId}`);
       const data: unknown = await res.json();
-      if (isRecord(data) && data.geometry) setSelectedPath(safeJsonParse<GeoJsonObject>(data.geometry)); 
+      if (isRecord(data) && data.geometry) setSelectedPath(safeJsonParse<GeoJsonObject>(data.geometry));
     } catch (e) { console.error(e); }
   };
 
@@ -640,7 +640,7 @@ export default function MapPage() {
         setPanelOpen(true);
         fetchNearbyBusStops(result.latlng.lat, result.latlng.lng);
       }
-    } catch (error) { console.error(error); } 
+    } catch (error) { console.error(error); }
     finally { setIsLoading(p => ({ ...p, search: false })); }
   };
 
@@ -657,7 +657,7 @@ export default function MapPage() {
         setRouteStart(start.latlng);
         setRouteEnd(end.latlng);
       }
-    } catch (error) { console.error(error); } 
+    } catch (error) { console.error(error); }
     finally { setIsLoading(p => ({ ...p, search: false })); }
   };
 
@@ -704,7 +704,7 @@ export default function MapPage() {
     if (!compQuery1.trim() || !compQuery2.trim()) {
       alert("Pasirinkite abu taškus palyginimui");
       return;
-    } 
+    }
 
     try {
       const [latlng1, latlng2] = await Promise.all([
@@ -723,9 +723,9 @@ export default function MapPage() {
       setIsComparing(true);
 
       const [res1, res2] = await Promise.all([
-          fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng1.latlng.lat}&lon=${latlng1.latlng.lng}`),
-          fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng2.latlng.lat}&lon=${latlng2.latlng.lng}`)
-        ]);
+        fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng1.latlng.lat}&lon=${latlng1.latlng.lng}`),
+        fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng2.latlng.lat}&lon=${latlng2.latlng.lng}`)
+      ]);
 
       if (res1.ok) setPlace1Analysis(await res1.json());
       if (res2.ok) setPlace2Analysis(await res2.json());
@@ -748,7 +748,7 @@ export default function MapPage() {
       alert("Įvyko klaida lyginant vietas.");
     }
 
-    setTimeout(() =>{
+    setTimeout(() => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }, 100);
   };
@@ -835,7 +835,7 @@ export default function MapPage() {
       return matchesCity && type !== null && selectedSchoolTypes[type] && rating >= minSchoolRating && s.location !== null;
     });
   }, [city, schools, selectedSchoolTypes, minSchoolRating]);
-  
+
   const calculateCrimeTotal = useCallback((eldership: CrimeByEldership | ProcessedCrimeData) => {
     return (selectedCrimes.hp ? eldership.Health_total : 0) + (selectedCrimes.th ? eldership.Theft_total : 0);
   }, [selectedCrimes]);
@@ -850,10 +850,10 @@ export default function MapPage() {
         </div>
       `;
       crimeLayerRef.current.bindPopup(popupContent).openPopup();
-      
+
       const closeHandler = () => setSelectedCrimeEldership(null);
       crimeLayerRef.current.on('popupclose', closeHandler);
-      
+
       return () => {
         crimeLayerRef.current?.off('popupclose', closeHandler);
       };
@@ -920,28 +920,28 @@ export default function MapPage() {
             <button className={`profile-btn ${routeProfile === 'foot' ? 'active' : ''}`} onClick={() => setRouteProfile('foot')} title="Pėsčiomis">🚶‍♂️ Pėsčiomis</button>
           </div>
         </div>
-      
 
-      {/* RIGHT UI: Layer Controls */}
-      <div className={`floating-ui top-right ${layersPanelCollapsed ? 'collapsed' : ''}`}>
-        <div className={`glass-panel layer-controls ${layersPanelCollapsed ? 'collapsed' : ''}`}>
-          <div className="layer-controls-header">
-            <h3>Sluoksniai</h3>
-            <button
-              className="collapse-panel-btn"
-              onClick={() => setLayersPanelCollapsed((prev) => !prev)}
-              title={layersPanelCollapsed ? 'Atidaryti sluoksnius' : 'Sumažinti sluoksnius'}
-            >
-              {layersPanelCollapsed ? '+' : '−'}
-            </button>
-          </div>
 
-          {!layersPanelCollapsed && (
-            <>
-              <button className={`layer-btn ${elderships.length ? 'active' : ''}`} onClick={toggleElderships}><MapIcon size={16} /> Seniūnijos</button>
-              <button className={`layer-btn ${crimeByEldership.length ? 'active' : ''}`} onClick={toggleCrimes}><ShieldAlert size={16} /> Nusikalstamumas</button>
-              <button className={`layer-btn ${schools.length ? 'active' : ''}`} onClick={toggleSchools}><School size={16} /> Mokyklos</button>
-              <button className={`layer-btn ${showingPolice ? 'active' : ''}`} onClick={() => {
+        {/* RIGHT UI: Layer Controls */}
+        <div className={`floating-ui top-right ${layersPanelCollapsed ? 'collapsed' : ''}`}>
+          <div className={`glass-panel layer-controls ${layersPanelCollapsed ? 'collapsed' : ''}`}>
+            <div className="layer-controls-header">
+              <h3>Sluoksniai</h3>
+              <button
+                className="collapse-panel-btn"
+                onClick={() => setLayersPanelCollapsed((prev) => !prev)}
+                title={layersPanelCollapsed ? 'Atidaryti sluoksnius' : 'Sumažinti sluoksnius'}
+              >
+                {layersPanelCollapsed ? '+' : '−'}
+              </button>
+            </div>
+
+            {!layersPanelCollapsed && (
+              <>
+                <button className={`layer-btn ${elderships.length ? 'active' : ''}`} onClick={toggleElderships}><MapIcon size={16} /> Seniūnijos</button>
+                <button className={`layer-btn ${crimeByEldership.length ? 'active' : ''}`} onClick={toggleCrimes}><ShieldAlert size={16} /> Nusikalstamumas</button>
+                <button className={`layer-btn ${schools.length ? 'active' : ''}`} onClick={toggleSchools}><School size={16} /> Mokyklos</button>
+                <button className={`layer-btn ${showingPolice ? 'active' : ''}`} onClick={() => {
                   if (showingPolice) {
                     hidePolice();
                     return;
@@ -951,62 +951,62 @@ export default function MapPage() {
                   else if (searchTarget) showClosestPolice(searchTarget);
                   else alert("Pasirinkite vietą žemėlapyje");
                 }}
-              >
-                {showingPolice ? '👮 Slėpti policiją' : '👮 Artimiausia policija'}
-              </button>
-
-              <hr style={{ margin: '10px 0', borderColor: 'rgba(0,0,0,0.1)' }} />
-              
-              {MAP_FEATURES.map(feature => (
-                <button 
-                  key={feature.id}
-                  className={`layer-btn ${activeFeatures[feature.id] ? 'active' : ''}`} 
-                  onClick={() => toggleNewFeature(feature.id)}
                 >
-                  {feature.label}
+                  {showingPolice ? '👮 Slėpti policiją' : '👮 Artimiausia policija'}
                 </button>
-              ))}
 
-              {crimeByEldership.length > 0 && (
-                <div className="crime-filters">
-                  <hr />
-                  <label><input type="checkbox" checked={selectedCrimes.hp} onChange={() => setSelectedCrimes(p => ({ ...p, hp: !p.hp }))} /> Sveikata</label>
-                  <label><input type="checkbox" checked={selectedCrimes.th} onChange={() => setSelectedCrimes(p => ({ ...p, th: !p.th }))} /> Vagystės</label>
-                </div>
-              )}
+                <hr style={{ margin: '10px 0', borderColor: 'rgba(0,0,0,0.1)' }} />
 
-              {schools.length > 0 && (
-                <div className="school-filters">
-                  <hr />
-                  <div className="school-filter-group">
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>Mokyklos tipas</div>
-                    {SCHOOL_TYPES.map((type) => (
-                      <label key={type}>
-                        <input
-                          type="checkbox"
-                          checked={selectedSchoolTypes[type]}
-                          onChange={() => setSelectedSchoolTypes(p => ({ ...p, [type]: !p[type] }))}
-                        />
-                        {SCHOOL_TYPE_LABELS[type]}
+                {MAP_FEATURES.map(feature => (
+                  <button
+                    key={feature.id}
+                    className={`layer-btn ${activeFeatures[feature.id] ? 'active' : ''}`}
+                    onClick={() => toggleNewFeature(feature.id)}
+                  >
+                    {feature.label}
+                  </button>
+                ))}
+
+                {crimeByEldership.length > 0 && (
+                  <div className="crime-filters">
+                    <hr />
+                    <label><input type="checkbox" checked={selectedCrimes.hp} onChange={() => setSelectedCrimes(p => ({ ...p, hp: !p.hp }))} /> Sveikata</label>
+                    <label><input type="checkbox" checked={selectedCrimes.th} onChange={() => setSelectedCrimes(p => ({ ...p, th: !p.th }))} /> Vagystės</label>
+                  </div>
+                )}
+
+                {schools.length > 0 && (
+                  <div className="school-filters">
+                    <hr />
+                    <div className="school-filter-group">
+                      <div style={{ fontWeight: 600, marginBottom: 6 }}>Mokyklos tipas</div>
+                      {SCHOOL_TYPES.map((type) => (
+                        <label key={type}>
+                          <input
+                            type="checkbox"
+                            checked={selectedSchoolTypes[type]}
+                            onChange={() => setSelectedSchoolTypes(p => ({ ...p, [type]: !p[type] }))}
+                          />
+                          {SCHOOL_TYPE_LABELS[type]}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="school-filter-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 600 }}>Min. reitingas</span>
+                        <select value={minSchoolRating} onChange={(e) => setMinSchoolRating(Number(e.target.value))}>
+                          {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
+                            <option key={value} value={value}>{value}</option>
+                          ))}
+                        </select>
                       </label>
-                    ))}
+                    </div>
                   </div>
-                  <div className="school-filter-group">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: 600 }}>Min. reitingas</span>
-                      <select value={minSchoolRating} onChange={(e) => setMinSchoolRating(Number(e.target.value))}>
-                        {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
-                          <option key={value} value={value}>{value}</option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )}
+          </div>
         </div>
-
         <MapContainer
           key={city}
           center={cityCenter}
@@ -1041,9 +1041,9 @@ export default function MapPage() {
 
           {elderships.map((e, i) => e.geometry ? (
             <GeoJSON key={`eldership-${i}`} data={e.geometry} style={{ color: "#3b82f6", weight: 2, fillOpacity: 0.03, dashArray: '5, 5' }}
-            onEachFeature={(_, layer) => layer.bindPopup(`<strong style="font-family:'Inter',sans-serif;font-size:15px;">${e.eldership_Name}</strong>`)}  />
+              onEachFeature={(_, layer) => layer.bindPopup(`<strong style="font-family:'Inter',sans-serif;font-size:15px;">${e.eldership_Name}</strong>`)} />
           ) : null)}
-          
+
           {processedCrimeData.map((e, i) => {
             const geometry = e.geometry ?? e.Geometry;
             if (!geometry) return null;
@@ -1139,17 +1139,17 @@ export default function MapPage() {
           <button className="panel-close-btn" onClick={() => setPanelOpen(false)}>✕</button>
 
           <div className="panel-content">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="m-0 text-xl font-black">Vietos Analizė</h2>
-            {selectedPlace && (
-              <button 
-                className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-xs font-bold"
-                onClick={() => navigate(`/analysis?lat=${selectedPlace.latlng.lat}&lon=${selectedPlace.latlng.lng}&address=${encodeURIComponent(selectedPlace.name)}`)}
-              >
-                <ExternalLink size={14} /> Atidaryti pilną
-              </button>
-            )}
-          </div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="m-0 text-xl font-black">Vietos Analizė</h2>
+              {selectedPlace && (
+                <button
+                  className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-xs font-bold"
+                  onClick={() => navigate(`/analysis?lat=${selectedPlace.latlng.lat}&lon=${selectedPlace.latlng.lng}&address=${encodeURIComponent(selectedPlace.name)}`)}
+                >
+                  <ExternalLink size={14} /> Atidaryti pilną
+                </button>
+              )}
+            </div>
             {selectedPlace && (
               <div className="stat-card">
                 <h3>Pasirinkta vieta</h3>
@@ -1272,7 +1272,7 @@ export default function MapPage() {
             <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500" />
               <h3 className="text-2xl font-bold text-slate-900 mb-8 truncate pr-8" title={compPlace1?.name}>{compPlace1?.name}</h3>
-              
+
               <div className="flex gap-4 mb-8">
                 <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
                   <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Pasiekiamumas</div>
@@ -1309,7 +1309,7 @@ export default function MapPage() {
             <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1.5 bg-rose-500" />
               <h3 className="text-2xl font-bold text-slate-900 mb-8 truncate pr-8" title={compPlace2?.name}>{compPlace2?.name}</h3>
-              
+
               <div className="flex gap-4 mb-8">
                 <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
                   <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Pasiekiamumas</div>
