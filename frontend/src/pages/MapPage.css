@@ -1,14 +1,14 @@
+/* MapPage.css */
 .map-page-container {
-  /*position: relative;*/
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: auto;
-  overflow-y: auto;
-  overflow-x: hidden;
   min-height: 100vh;
+  background-color: #f8fafc;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
+/* Plaukiojantis žemėlapis be storų rėmų */
 .map-wrapper {
   position: relative;
   margin: 30px auto;
@@ -19,7 +19,8 @@
   border-radius: 16px;
   overflow: hidden;
   z-index: 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  background: #e2e8f0; /* Kol užsikrauna Leaflet */
 }
 
 .full-screen-map {
@@ -28,12 +29,13 @@
   z-index: 0;
 }
 
+/* Moderni UI navigacija virš žemėlapio */
 .floating-ui {
   position: absolute;
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .top-left {
@@ -57,50 +59,68 @@
   max-height: none;
 }
 
+/* Lovable stiliaus stiklo kortelės */
 .glass-panel, .glass-btn {
   background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  padding: 12px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+  padding: 16px;
 }
 
 .glass-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
   cursor: pointer;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.8);
   font-weight: 600;
-  transition: 0.2s;
+  font-size: 14px;
+  color: #334155;
+  transition: all 0.2s ease;
+  padding: 10px 16px;
 }
 
-.glass-btn:hover {
-  background: white;
+.glass-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 1);
   transform: translateY(-2px);
+  box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.1);
 }
 
+.glass-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Paieškos laukeliai plaukiojančiame UI */
 .search-box {
   display: flex;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 12px;
+  padding: 10px 14px;
+  align-items: center;
 }
 
 .search-box input {
   border: none;
   background: transparent;
   outline: none;
-  width: 200px;
-  font-size: 14px;
+  width: 220px;
+  font-size: 15px;
+  color: #1e293b;
+  font-weight: 500;
 }
+
+.search-box input::placeholder { color: #94a3b8; font-weight: 400; }
 
 .search-box button {
   background: #3b82f6;
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 6px;
+  border-radius: 10px;
+  padding: 8px 10px;
   cursor: pointer;
 }
 
@@ -174,297 +194,172 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #f1f5f9;
-  border: none;
-  padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: 0.2s;
+  justify-content: center;
 }
 
-.layer-btn.active {
-  background: #3b82f6;
-  color: white;
-}
+.search-box button:hover { background: #2563eb; }
 
-.crime-filters {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 14px;
-}
-
-.school-filters {
-  display: flex;
-  flex-direction: column;
+.aruodas-parse-pill {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
-  font-size: 14px;
-}
-
-.school-filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.school-filters label {
-  display: flex;
   align-items: center;
-  gap: 8px;
-  cursor: pointer;
+  max-width: 340px;
+  padding: 10px 14px;
+  background: rgba(236, 253, 245, 0.92);
+  border-color: rgba(16, 185, 129, 0.25);
 }
 
-.school-filters select {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 14px;
+.aruodas-parse-pill strong {
+  overflow: hidden;
+  color: #065f46;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.side-panel {
-  position: absolute;
-  top: 0;
-  right: -350px; 
-  width: 300px;
-  height: 100%;
-  background: white;
-  z-index: 1200; /* Increased to cover floating UI (which is 1000) */
-  box-shadow: -5px 0 25px rgba(0,0,0,0.1);
-  transition: right 0.3s ease-in-out;
-  padding: 20px;
-}
-
-.side-panel.open {
-  right: 0; 
-}
-
-.panel-close-btn {
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-.bus-popup h3 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  color: #1e293b;
-}
-
-.popup-section {
-  margin-top: 10px;
-}
-
-.section-title {
+.aruodas-parse-pill em {
+  color: #047857;
   font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
   text-transform: uppercase;
+}
+
+/* Sluoksnių kontrolė */
+.layer-controls h3 {
+  margin: 0 0 16px 0;
+  font-size: 15px;
   font-weight: 700;
-  color: #64748b;
-  margin-bottom: 5px;
+  color: #0f172a;
+  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.sub-text {
-  font-size: 12px;
-  color: #94a3b8;
-  font-style: italic;
-}
-
-.popup-divider {
-  border: 0;
-  border-top: 1px dashed #e2e8f0;
-  margin: 12px 0;
-}
-
-.route-grid {
+.layer-btn {
+  width: 100%;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  max-width: 200px;
-}
-
-.route-tag {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #334155;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.arrival-list {
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.arrival-list li {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  border-bottom: 1px solid #f8fafc;
-  font-size: 13px;
-}
-
-.arrival-item {
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin-bottom: 10px;
   cursor: pointer;
-  padding: 10px;
-  border-radius: 8px;
-  border-left: 4px solid transparent;
   transition: all 0.2s ease;
-}
-
-.arrival-item:hover {
-  background: #eff6ff; 
-  border-left-color: #3b82f6; 
-  transform: translateX(4px);
-}
-
-.arrival-item:active {
-  background: #dbeafe;
-  transform: scale(0.98);
-}
-
-.route-badge {
-  background: #3b82f6;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: bold;
-  min-width: 25px;
-  text-align: center;
-}
-
-.main-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.stat-number {
-  font-size: 32px;
-  font-weight: 800;
-  color: #3b82f6;
-}
-
-.stat-label {
   font-size: 14px;
-  color: #64748b;
+  font-weight: 600;
+  color: #475569;
 }
 
-.frequency-mini-chart {
-  display: flex;
-  align-items: flex-end;
-  height: 60px;
-  gap: 4px;
-  margin-top: 10px;
-  border-bottom: 1px solid #e2e8f0;
+.layer-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+.layer-btn.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
 }
 
-.chart-bar-wrapper {
-  flex: 1;
+/* Dešinysis šoninis skydelis */
+.side-panel {
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  right: -420px; 
+  width: 400px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  z-index: 1200;
+  box-shadow: -10px 0 40px rgba(0,0,0,0.1);
+  transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 30px;
+  border-radius: 24px 0 0 24px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  height: 100%;
 }
 
-.chart-bar {
-  width: 100%;
-  background: #3b82f6;
-  border-radius: 2px 2px 0 0;
-  min-height: 2px;
-  transition: height 0.3s ease;
-}
+.side-panel.open { right: 0; }
 
-.bar-label {
-  font-size: 8px;
-  color: #94a3b8;
-  margin-top: 4px;
-}
-
-/* --- Pick destination on map button --- */
-.pick-dest-btn {
-  background: #f1f5f9 !important;
-  color: #334155;
+.panel-close-btn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: #f1f5f9;
   border: none;
-  border-radius: 8px;
-  padding: 6px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 16px;
+  color: #475569;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.pick-dest-btn:hover {
-  background: #e2e8f0 !important;
-}
-
-.pick-dest-btn.active {
-  background: #3b82f6 !important;
-  color: white;
-}
-
-.map-picking-dest .leaflet-container {
-  cursor: crosshair !important;
-}
-
-/* --- Clear route button --- */
-.clear-route-btn {
-  background: #ef4444 !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.clear-route-btn:hover {
-  background: #dc2626 !important;
-}
-
-/* --- Place Info in Side Panel --- */
-.place-address {
-  font-size: 14px;
-  color: #334155;
-  margin: 4px 0;
-  word-break: break-word;
-}
-
-.place-coords {
-  font-size: 12px;
-  color: #94a3b8;
-  margin: 0;
-}
-
-/* --- Routing Machine Overrides --- */
-.leaflet-routing-container {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  padding: 12px;
-  max-height: 40vh;
-  overflow-y: auto;
-  font-size: 13px;
-}
-
-.leaflet-routing-container table {
-  display: none !important;
-}
+.panel-close-btn:hover { background: #e2e8f0; color: #0f172a; }
 
 .panel-content {
   overflow-y: auto;
-  max-height: calc(100vh - 60px);
+  flex: 1;
+  padding-right: 8px; /* Slinkties juostai */
+}
+.panel-content::-webkit-scrollbar { width: 6px; }
+.panel-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+.panel-content h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 24px;
+  margin-top: 0;
 }
 
 .stat-card {
-  margin-bottom: 12px;
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 15px -5px rgba(0,0,0,0.03);
+}
+
+.stat-card h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  margin: 0 0 12px 0;
+}
+
+/* Likę originalūs stiliai be pakeitimų funkcinėms klasėms */
+.pick-dest-btn { background: #f1f5f9 !important; color: #334155; border: none; border-radius: 10px; padding: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+.pick-dest-btn:hover { background: #e2e8f0 !important; }
+.pick-dest-btn.active { background: #3b82f6 !important; color: white; }
+.clear-route-btn { background: #fef2f2 !important; color: #ef4444 !important; display: flex; align-items: center; justify-content: center; border-radius: 10px; padding: 8px; border: none; cursor: pointer; transition: 0.2s; }
+.clear-route-btn:hover { background: #fee2e2 !important; }
+
+/* Maršrutų stiliai (Routing Profile) */
+.profile-selector { display: flex; gap: 8px; padding: 8px; }
+.profile-btn { flex: 1; padding: 8px 12px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: 0.2s; }
+.profile-btn:hover { background: #f1f5f9; color: #1e293b; }
+.profile-btn.active { background: #3b82f6; color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+
+/* Žymekliai ir pop-up'ai */
+.place-address { font-size: 16px; font-weight: 600; color: #0f172a; margin: 4px 0; word-break: break-word; }
+.place-coords { font-size: 13px; color: #64748b; margin: 0; }
+.leaflet-popup-content-wrapper { border-radius: 16px !important; box-shadow: 0 15px 35px -5px rgba(0,0,0,0.15) !important; border: 1px solid #f1f5f9; padding: 4px; }
+.leaflet-popup-content { font-family: 'Inter', sans-serif !important; }
+
+/* Palyginimo modulis ("Comparison Dashboard") */
+.comparison-dashboard {
+  margin: 0 16px 32px 16px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05);
+  border: 1px solid #f1f5f9;
+  padding: 60px 40px;
 }

@@ -21,7 +21,9 @@ if (!string.IsNullOrEmpty(localPassword))
 }
 
 builder.Services.AddControllers();
-
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<GeocodingService>();
+builder.Services.AddScoped<AruodasScraperService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString, x => x.UseNetTopologySuite()));

@@ -7,11 +7,14 @@ declare module "leaflet" {
       profile?: string;
     }
 
-    function osrmv1(options?: OSRMv1Options): any;
+    type Router = object;
+
+    function osrmv1(options?: OSRMv1Options): Router;
 
     interface ControlOptions {
+      position?: L.ControlPosition;
       waypoints: L.LatLng[];
-      router?: any;
+      router?: Router;
       routeWhileDragging?: boolean;
       showAlternatives?: boolean;
       addWaypoints?: boolean;
