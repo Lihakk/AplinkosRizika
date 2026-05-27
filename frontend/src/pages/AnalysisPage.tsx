@@ -196,11 +196,11 @@ export default function AnalysisPage() {
           {activeTab === "overview" && (
             <div className="overview-grid">
               {point && <WalkScore latlng={point} onScore={setWalkScoreValue} />}
-              <article className="metric-card">
+              {/* <article className="metric-card">
                 <Navigation size={22} />
                 <span>Vaikščiojamumas</span>
                 <strong>{walkScoreValue == null ? "—" : `${walkScoreValue}/100`}</strong>
-              </article>
+              </article> */}
               <article className="metric-card">
                 <Layers size={22} />
                 <span>OSM paslaugos</span>

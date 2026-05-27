@@ -13,6 +13,7 @@ declare module "leaflet" {
 
     interface ControlOptions {
       position?: L.ControlPosition;
+      show?: boolean;
       waypoints: L.LatLng[];
       router?: Router;
       routeWhileDragging?: boolean;
@@ -33,6 +34,7 @@ declare module "leaflet" {
 
     interface Control extends L.Control {
       setWaypoints(waypoints: L.LatLng[]): this;
+      on(type: string, fn: (e: any) => void, context?: any): this;
     }
 
     function control(options: ControlOptions): Control;
