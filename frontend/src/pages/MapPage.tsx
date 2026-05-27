@@ -388,6 +388,7 @@ export default function MapPage() {
   const [loadingEval, setLoadingEval] = useState(false);
   const [routeStart, setRouteStart] = useState<LatLng | null>(null);
   const [routeEnd, setRouteEnd] = useState<LatLng | null>(null);
+  const [routeToPolice, setRouteToPolice] = useState(false);
   const [destQuery, setDestQuery] = useState("");
   const [pickingDest, setPickingDest] = useState(false);
   const [routeProfile, setRouteProfile] = useState<'car' | 'bike' | 'foot'>('car');
@@ -439,6 +440,11 @@ export default function MapPage() {
   const hidePolice = () => {
     setClosestPolice(null);
     setShowingPolice(false);
+    if (routeToPolice) {
+      setRouteStart(null);
+      setRouteEnd(null);
+      setRouteToPolice(false);
+    }
   };
 
   const resolveLocationInput = async (input: string, rememberAruodas = false): Promise<LocationResolveResult | null> => {
@@ -487,10 +493,14 @@ export default function MapPage() {
     if (!coordinates) return;
     const [lng, lat] = coordinates;
     const name = closest.name || "Policijos nuovada";
+    const policeLatLng = L.latLng(lat, lng);
 
-    setClosestPolice({ latlng: L.latLng(lat, lng), name, distance: closest.distance });
+    setClosestPolice({ latlng: policeLatLng, name, distance: closest.distance });
     setShowingPolice(true);
-    mapRef.current.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
+    setRouteStart(userPos);
+    setRouteEnd(policeLatLng);
+    setRouteToPolice(true);
+    mapRef.current.flyTo(policeLatLng, 16, { animate: true, duration: 1.2 });
   }, [police]);
 
   useEffect(() => {
@@ -656,6 +666,7 @@ export default function MapPage() {
         setSearchTarget(start.latlng);
         setRouteStart(start.latlng);
         setRouteEnd(end.latlng);
+        setRouteToPolice(false);
       }
     } catch (error) { console.error(error); }
     finally { setIsLoading(p => ({ ...p, search: false })); }
@@ -664,6 +675,7 @@ export default function MapPage() {
   const clearRoute = () => {
     setRouteStart(null);
     setRouteEnd(null);
+    setRouteToPolice(false);
     setDestQuery("");
     setPickingDest(false);
   };
@@ -1024,7 +1036,7 @@ export default function MapPage() {
             attribution='&copy; OpenStreetMap contributors &copy; CARTO'
           />
           <CityViewController center={cityCenter} />
-          <RoutingControl start={routeStart} end={routeEnd} profile={routeProfile} />
+          <RoutingControl start={routeStart} end={routeEnd} profile={routeProfile} hideEndMarker={routeToPolice} />
 
           <LocationMarker
             customIcon={customIcon}

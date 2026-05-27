@@ -15,9 +15,10 @@ interface RoutingControlProps {
   start: L.LatLng | null;
   end: L.LatLng | null;
   profile: 'car' | 'bike' | 'foot';
+  hideEndMarker?: boolean;
 }
 
-export default function RoutingControl({ start, end, profile }: RoutingControlProps) {
+export default function RoutingControl({ start, end, profile, hideEndMarker }: RoutingControlProps) {
   const map = useMap();
   const controlRef = useRef<L.Routing.Control | null>(null);
   //type RouteProfile = 'car' | 'bike' | 'foot';
@@ -54,6 +55,7 @@ export default function RoutingControl({ start, end, profile }: RoutingControlPr
         fitSelectedRoutes: true,
         createMarker: function (i: number, waypoint: L.Routing.Waypoint) {
           if (i === 0) return null as unknown as L.Marker;
+          if (hideEndMarker && i === 1) return null as unknown as L.Marker;
           return L.marker(waypoint.latLng, { icon: routeIcon });
         },
         altLineOptions: {
