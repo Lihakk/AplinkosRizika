@@ -10,7 +10,6 @@ import {
   Home,
   Layers,
   MapPin,
-  Navigation,
   ShieldCheck,
 } from "lucide-react";
 import WalkScore from "../components/WalkScore";

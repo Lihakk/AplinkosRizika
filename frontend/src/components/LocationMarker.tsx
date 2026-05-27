@@ -34,7 +34,7 @@ export default function LocationMarker({
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDblClick = useRef(false);
 
-  const map = useMapEvents({
+  useMapEvents({
     click(e) {
       // If picking destination mode, use this click for destination
       if (pickingDest && onDestPicked) {

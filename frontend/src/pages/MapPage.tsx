@@ -735,6 +735,9 @@ export default function MapPage() {
 
       setIsComparing(true);
 
+      setRouteStart(new L.LatLng(54.90731, 23.94094));                                                                       
+      setRouteEnd(new L.LatLng(54.90591, 23.94158));
+
       const [res1, res2] = await Promise.all([
         fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng1.latlng.lat}&lon=${latlng1.latlng.lng}`),
         fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng2.latlng.lat}&lon=${latlng2.latlng.lng}`)
@@ -1186,7 +1189,7 @@ export default function MapPage() {
               </div>
             )}
 
-            {selectedPlace && <WalkScore latlng={selectedPlace.latlng} onScore={setWalkScoreValue} />}
+            {selectedPlace && <div className="hidden"><WalkScore latlng={selectedPlace.latlng} onScore={setWalkScoreValue} /></div>}
 
             {selectedPlace && qualityOfLifeScore !== null && (
               <div className="stat-card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
