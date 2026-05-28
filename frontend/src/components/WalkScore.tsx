@@ -6,8 +6,8 @@ function scoreLabel(score: number): string {
   if (score >= 90) return "Puikiai";
   if (score >= 70) return "Labai gerai";
   if (score >= 50) return "Gerai";
-  if (score >= 25) return "Normaliai";
-  return "Prastai";
+  if (score >= 25) return "Vidutiniškai";
+  return "Silpnai";
 }
 
 interface WalkScoreProps {
@@ -42,7 +42,7 @@ export default function WalkScore({ latlng, onScore }: WalkScoreProps) {
       })
       .catch(() => {
         if (!cancelled) {
-          setResult({ key: pointKey, score: null, error: "" });
+          setResult({ key: pointKey, score: null, error: "Vaikščiojamumo balo apskaičiuoti nepavyko." });
           onScore?.(null);
         }
       });

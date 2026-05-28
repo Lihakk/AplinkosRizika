@@ -1189,7 +1189,7 @@ export default function MapPage() {
                   className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-xs font-bold"
                   onClick={() => navigate(`/analysis?lat=${selectedPlace.latlng.lat}&lon=${selectedPlace.latlng.lng}&address=${encodeURIComponent(selectedPlace.name)}`)}
                 >
-                  <ExternalLink size={14} /> Atidaryti pilną
+                  <ExternalLink size={14} /> Atidaryti išsamią analizę
                 </button>
               )}
             </div>
@@ -1299,8 +1299,8 @@ export default function MapPage() {
       {/* --- COMPARISON DASHBOARD --- */}
       <div className="comparison-dashboard">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-3">Veiklos Analizė</h2>
-          <p className="text-lg text-slate-500 font-medium">Palyginkite dvi vietas pagal pasiekiamumą ir saugumą</p>
+          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-3">Vietų palyginimas</h2>
+          <p className="text-lg text-slate-500 font-medium">Palyginkite dvi vietas pagal pasiekiamumą, saugumą ir gyvenimo kokybę.</p>
         </div>
 
         <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-16">
@@ -1308,7 +1308,7 @@ export default function MapPage() {
             <input type="text" placeholder="Pirmo adreso paieška..." value={compQuery1} onChange={(e) => setCompQuery1(e.target.value)} onKeyDown={(e) => e.key === "Enter" && startComparison()} className="w-full bg-transparent border-none outline-none px-3 py-2 text-slate-900 font-medium placeholder-slate-400" />
           </div>
 
-          <div className="text-sm font-black text-slate-300 bg-slate-100 rounded-full px-4 py-2 uppercase tracking-widest">VS</div>
+          <div className="text-sm font-black text-slate-300 bg-slate-100 rounded-full px-4 py-2 uppercase tracking-widest">Palyginti su</div>
 
           <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-2 w-full md:w-[320px] flex items-center transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500">
             <input type="text" placeholder="Antro adreso paieška..." value={compQuery2} onChange={(e) => setCompQuery2(e.target.value)} onKeyDown={(e) => e.key === "Enter" && startComparison()} className="w-full bg-transparent border-none outline-none px-3 py-2 text-slate-900 font-medium placeholder-slate-400" />
@@ -1346,10 +1346,10 @@ export default function MapPage() {
                 </div>
                 <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
                   <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Saugumas</div>
-                  <div className={`text-3xl font-black ${place1CrimeScore && place1CrimeScore > 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{place1CrimeScore !== null ? place1CrimeScore : 'N/A'}</div>
+                  <div className={`text-3xl font-black ${place1CrimeScore && place1CrimeScore > 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{place1CrimeScore !== null ? place1CrimeScore : 'Nėra'}</div>
                 </div>
                 <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex-1 text-center">
-                  <div className="text-[10px] text-blue-800 uppercase font-black tracking-wider mb-2">Gyvenimo Kokybė</div>
+                  <div className="text-[10px] text-blue-800 uppercase font-black tracking-wider mb-2">Gyvenimo kokybė</div>
                   <div className="text-4xl font-black text-blue-700">{Math.round(((place1Analysis?.totalScore || 0) + (place1WalkScore || 0) + (place1CrimeScore || 0)) / 3) || 0}</div>
                 </div>
               </div>
@@ -1383,10 +1383,10 @@ export default function MapPage() {
                 </div>
                 <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
                   <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Saugumas</div>
-                  <div className={`text-3xl font-black ${place2CrimeScore && place2CrimeScore > 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{place2CrimeScore !== null ? place2CrimeScore : 'N/A'}</div>
+                  <div className={`text-3xl font-black ${place2CrimeScore && place2CrimeScore > 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{place2CrimeScore !== null ? place2CrimeScore : 'Nėra'}</div>
                 </div>
                 <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex-1 text-center">
-                  <div className="text-[10px] text-rose-800 uppercase font-black tracking-wider mb-2">Gyvenimo Kokybė</div>
+                  <div className="text-[10px] text-rose-800 uppercase font-black tracking-wider mb-2">Gyvenimo kokybė</div>
                   <div className="text-4xl font-black text-rose-700">{Math.round(((place2Analysis?.totalScore || 0) + (place2WalkScore || 0) + (place2CrimeScore || 0)) / 3) || 0}</div>
                 </div>
               </div>
