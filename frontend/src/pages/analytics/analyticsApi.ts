@@ -478,7 +478,7 @@ export async function getDeepEvaluation(address: string): Promise<DeepEvaluation
     totalScore: Math.round((evaluation.totalScore + safetyRating + transitScore) / 3),
     safetyRating,
     crimeBreakdown: [
-      { label: "Sveikata", value: Math.round((health / crimeTotal) * 100), color: "#8b5cf6" },
+      { label: "Sveikata", value: Math.round((health / crimeTotal) * 100), color: "#176043" },
       { label: "Vagystės", value: Math.round((theft / crimeTotal) * 100), color: "#ef4444" },
       { label: "Kita", value: Math.round((other / crimeTotal) * 100), color: "#64748b" },
     ],
