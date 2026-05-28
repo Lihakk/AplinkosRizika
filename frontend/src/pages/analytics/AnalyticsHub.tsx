@@ -104,7 +104,7 @@ function PageFrame({
           <span className="analytics-eyebrow">{eyebrow}</span>
           <h1>
             {title}
-            {titleAccent && <span className="analytics-title-accent">{titleAccent}</span>}
+            {titleAccent && <span className="analytics-title-accent"> {titleAccent}</span>}
           </h1>
           <p>{description}</p>
         </section>

@@ -10,7 +10,7 @@ import type { Feature as GeoJsonFeature, GeoJsonObject, MultiPolygon, Point, Pol
 const API_URL = import.meta.env.VITE_API_URL || "http://144.24.247.126:5178";
 const KAUNAS_CENTER = { lat: 54.8985, lon: 23.9036 };
 const CACHE_TTL_MS = 5 * 60 * 1000;
-const REQUEST_TIMEOUT_MS = 12000;
+const REQUEST_TIMEOUT_MS = 30000;
 
 const responseCache = new Map<string, { expiresAt: number; value: unknown }>();
 const inflightRequests = new Map<string, Promise<unknown>>();
@@ -122,6 +122,10 @@ function coordinatePath(path: string, lat: number, lon: number, rest = "") {
   return `${path}?lat=${roundCoordinate(lat)}&lon=${roundCoordinate(lon)}${rest}`;
 }
 
+function isAbortError(error: unknown) {
+  return (error instanceof DOMException && error.name === "AbortError") || (isRecord(error) && error.name === "AbortError");
+}
+
 async function fetchJson<T>(path: string, fallback: T, ttlMs = CACHE_TTL_MS): Promise<T> {
   const cached = responseCache.get(path);
   if (cached && cached.expiresAt > Date.now()) return cached.value as T;
@@ -132,24 +136,25 @@ async function fetchJson<T>(path: string, fallback: T, ttlMs = CACHE_TTL_MS): Pr
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const request = (async () => {
-    const response = await fetch(`${API_URL}${path}`, { signal: controller.signal });
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-    const value = (await response.json()) as T;
-    responseCache.set(path, { expiresAt: Date.now() + ttlMs, value });
-    return value;
+    try {
+      const response = await fetch(`${API_URL}${path}`, { signal: controller.signal });
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      const value = (await response.json()) as T;
+      responseCache.set(path, { expiresAt: Date.now() + ttlMs, value });
+      return value;
+    } catch (error) {
+      if (!isAbortError(error)) {
+        console.error(`Analytics API failed: ${path}`, error);
+      }
+      return fallback;
+    } finally {
+      inflightRequests.delete(path);
+      window.clearTimeout(timeout);
+    }
   })();
 
   inflightRequests.set(path, request);
-
-  try {
-    return await request;
-  } catch (error) {
-    console.error(`Analytics API failed: ${path}`, error);
-    return fallback;
-  } finally {
-    inflightRequests.delete(path);
-    window.clearTimeout(timeout);
-  }
+  return request;
 }
 
 function pointInRing(lng: number, lat: number, ring: Position[]) {
@@ -335,7 +340,7 @@ export async function getLiveEldershipMetrics(): Promise<LiveEldershipMetric[]> 
 
   return mapWithConcurrency(
     elderships,
-    3,
+    2,
     async (eldership) => {
       const center = centroid(eldership.geometry);
       const crime = crimes.find((item) => item.id === eldership.id || item.name === eldership.name);
@@ -414,8 +419,8 @@ export async function getLiveRealEstateListings(lat = KAUNAS_CENTER.lat, lon = K
   const maxCrime = Math.max(...crimes.map((crime) => crime.total), 1);
 
   return mapWithConcurrency(
-    listingsRaw,
-    4,
+    listingsRaw.slice(0, 18),
+    2,
     async (listing, index) => {
       const listingLat = readNumber(listing.lat, lat);
       const listingLon = readNumber(listing.lon, lon);
