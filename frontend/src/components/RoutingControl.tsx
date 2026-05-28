@@ -62,7 +62,7 @@ export default function RoutingControl({ start, end, profile, hideEndMarker }: R
           styles: [
             { color: "black", opacity: 0.15, weight: 9 },
             { color: "white", opacity: 0.8, weight: 6 },
-            { color: "blue", opacity: 0.5, weight: 2 },
+            { color: "#176043", opacity: 0.58, weight: 2 },
           ],
           extendToWaypoints: true,
           missingRouteTolerance: 0,

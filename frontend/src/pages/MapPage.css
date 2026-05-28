@@ -1,26 +1,25 @@
-/* MapPage.css */
 .map-page-container {
   display: flex;
   flex-direction: column;
   width: 100%;
   min-height: 100vh;
-  background-color: #f8fafc;
-  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: Inter, system-ui, sans-serif;
 }
 
-/* Plaukiojantis žemėlapis be storų rėmų */
 .map-wrapper {
   position: relative;
-  margin: 30px auto;
+  z-index: 0;
+  overflow: hidden;
   width: min(95%, 1400px);
   max-width: 1400px;
   height: min(70vh, 700px);
-  border: 3px solid #9ca3af;
-  border-radius: 16px;
-  overflow: hidden;
-  z-index: 0;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  background: #e2e8f0; /* Kol užsikrauna Leaflet */
+  margin: 30px auto;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: #dfe8e3;
+  box-shadow: var(--app-shadow-strong);
 }
 
 .full-screen-map {
@@ -29,7 +28,6 @@
   z-index: 0;
 }
 
-/* Moderni UI navigacija virš žemėlapio */
 .floating-ui {
   position: absolute;
   z-index: 1000;
@@ -79,14 +77,14 @@
   max-height: none;
 }
 
-/* Lovable stiliaus stiklo kortelės */
-.glass-panel, .glass-btn {
-  background: rgba(255, 255, 255, 0.85);
+.glass-panel,
+.glass-btn {
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-panel);
+  box-shadow: var(--app-shadow);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 16px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
   padding: 16px;
 }
 
@@ -95,53 +93,91 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  font-weight: 600;
   font-size: 14px;
-  color: #334155;
-  transition: all 0.2s ease;
+  font-weight: 800;
   padding: 10px 16px;
+  transition: all 0.2s ease;
 }
 
 .glass-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 1);
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(32, 48, 43, 0.1);
   transform: translateY(-2px);
-  box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.1);
 }
 
 .glass-btn:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
-/* Paieškos laukeliai plaukiojančiame UI */
 .search-box {
   display: flex;
+  align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  align-items: center;
 }
 
 .search-box input {
-  border: none;
-  background: transparent;
-  outline: none;
   width: 220px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--app-text);
   font-size: 15px;
-  color: #1e293b;
+  font-weight: 650;
+}
+
+.search-box input::placeholder {
+  color: #9aa8a2;
   font-weight: 500;
 }
 
-.search-box input::placeholder { color: #94a3b8; font-weight: 400; }
-
 .search-box button {
-  background: #3b82f6;
-  color: white;
   border: none;
-  border-radius: 10px;
-  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--app-green);
+  color: #ffffff;
   cursor: pointer;
+  padding: 8px 10px;
+}
+
+.search-box button:hover {
+  background: #0f4d35;
+}
+
+.aruodas-parse-pill {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  max-width: 340px;
+  border-color: rgba(23, 96, 67, 0.24);
+  background: rgba(231, 243, 238, 0.94);
+  padding: 10px 14px;
+}
+
+.aruodas-parse-pill strong {
+  overflow: hidden;
+  color: var(--app-green);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aruodas-parse-pill em {
+  color: var(--app-green);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.layer-controls {
+  max-height: 100%;
+  overflow-y: auto;
 }
 
 .layer-controls-header {
@@ -152,36 +188,36 @@
   margin-bottom: 10px;
 }
 
-.layer-controls-header h3 {
-  margin: 0;
-  font-size: 16px;
-  white-space: nowrap;
+.layer-controls-header h3,
+.layer-controls h3 {
   overflow: hidden;
+  margin: 0 0 10px;
+  color: var(--app-text);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0;
   text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .collapse-panel-btn {
-  border: none;
-  background: #f1f5f9;
-  color: #334155;
-  border-radius: 10px;
-  width: 34px;
-  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: var(--app-green-soft);
+  color: var(--app-green);
   cursor: pointer;
   font-size: 18px;
   transition: background 0.2s ease;
 }
 
 .collapse-panel-btn:hover {
-  background: #e2e8f0;
-}
-
-.layer-controls {
-  max-height: 100%;
-  overflow-y: auto;
+  background: #dbe6e1;
 }
 
 .layer-controls.collapsed {
@@ -189,7 +225,11 @@
   padding: 8px;
 }
 
-.layer-controls.collapsed .layer-controls-header h3 {
+.layer-controls.collapsed .layer-controls-header h3,
+.layer-controls.collapsed .layer-btn,
+.layer-controls.collapsed .crime-filters,
+.layer-controls.collapsed .school-filters,
+.layer-controls.collapsed hr {
   display: none;
 }
 
@@ -198,196 +238,254 @@
   height: 44px;
 }
 
-.layer-controls.collapsed .layer-btn,
-.layer-controls.collapsed .crime-filters,
-.layer-controls.collapsed .school-filters,
-.layer-controls.collapsed hr {
-  display: none;
-}
-
-.layer-controls h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-}
-
 .layer-btn {
-  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.search-box button:hover { background: #2563eb; }
-
-.aruodas-parse-pill {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  max-width: 340px;
-  padding: 10px 14px;
-  background: rgba(236, 253, 245, 0.92);
-  border-color: rgba(16, 185, 129, 0.25);
-}
-
-.aruodas-parse-pill strong {
-  overflow: hidden;
-  color: #065f46;
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.aruodas-parse-pill em {
-  color: #047857;
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-/* Sluoksnių kontrolė */
-.layer-controls h3 {
-  margin: 0 0 16px 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.layer-btn {
   width: 100%;
-  display: flex;
-  align-items: center;
   gap: 12px;
+  border: 1px solid #dbe6e1;
+  border-radius: 8px;
   background: transparent;
-  border: 1px solid #e2e8f0;
-  padding: 12px 14px;
-  border-radius: 12px;
-  margin-bottom: 10px;
+  color: var(--app-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
   font-size: 14px;
-  font-weight: 600;
-  color: #475569;
+  font-weight: 800;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  transition: all 0.2s ease;
 }
 
-.layer-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+.layer-btn:hover {
+  border-color: #c5d3cc;
+  background: #f7fbf9;
+}
 
 .layer-btn.active {
-  background: #eff6ff;
-  border-color: #3b82f6;
-  color: #1d4ed8;
+  border-color: var(--app-green);
+  background: var(--app-green-soft);
+  color: var(--app-green);
 }
 
-/* Dešinysis šoninis skydelis */
 .side-panel {
   position: absolute;
   top: 16px;
+  right: -420px;
   bottom: 16px;
-  right: -420px; 
-  width: 400px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
   z-index: 1200;
-  box-shadow: -10px 0 40px rgba(0,0,0,0.1);
-  transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  padding: 30px;
-  border-radius: 24px 0 0 24px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
   display: flex;
   flex-direction: column;
+  width: 400px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px 0 0 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: -18px 0 48px rgba(21, 32, 28, 0.12);
+  backdrop-filter: blur(20px);
+  padding: 30px;
+  transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.side-panel.open { right: 0; }
+.side-panel.open {
+  right: 0;
+}
 
 .panel-close-btn {
   position: absolute;
   top: 24px;
   right: 24px;
-  background: #f1f5f9;
-  border: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  font-size: 16px;
-  color: #475569;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: #f7fbf9;
+  color: var(--app-muted);
+  cursor: pointer;
+  font-size: 16px;
   transition: 0.2s;
 }
 
-.panel-close-btn:hover { background: #e2e8f0; color: #0f172a; }
+.panel-close-btn:hover {
+  background: var(--app-green-soft);
+  color: var(--app-text);
+}
 
 .panel-content {
   overflow-y: auto;
   flex: 1;
-  padding-right: 8px; /* Slinkties juostai */
+  padding-right: 8px;
 }
-.panel-content::-webkit-scrollbar { width: 6px; }
-.panel-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+.panel-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  background: #c5d3cc;
+}
 
 .panel-content h2 {
+  margin: 0 0 24px;
+  color: var(--app-text);
   font-size: 24px;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 24px;
-  margin-top: 0;
+  font-weight: 900;
 }
 
 .stat-card {
+  border: 1px solid #dbe6e1;
+  border-radius: 8px;
   background: #ffffff;
-  border: 1px solid #f1f5f9;
-  border-radius: 16px;
-  padding: 20px;
+  box-shadow: 0 14px 32px rgba(32, 48, 43, 0.05);
   margin-bottom: 16px;
-  box-shadow: 0 4px 15px -5px rgba(0,0,0,0.03);
+  padding: 20px;
 }
 
 .stat-card h3 {
+  margin: 0 0 12px;
+  color: var(--app-muted-2);
   font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
   text-transform: uppercase;
-  color: #64748b;
-  letter-spacing: 0.5px;
-  margin: 0 0 12px 0;
 }
 
-/* Likę originalūs stiliai be pakeitimų funkcinėms klasėms */
-.pick-dest-btn { background: #f1f5f9 !important; color: #334155; border: none; border-radius: 10px; padding: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
-.pick-dest-btn:hover { background: #e2e8f0 !important; }
-.pick-dest-btn.active { background: #3b82f6 !important; color: white; }
-.clear-route-btn { background: #fef2f2 !important; color: #ef4444 !important; display: flex; align-items: center; justify-content: center; border-radius: 10px; padding: 8px; border: none; cursor: pointer; transition: 0.2s; }
-.clear-route-btn:hover { background: #fee2e2 !important; }
+.pick-dest-btn,
+.clear-route-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 8px;
+  transition: 0.2s;
+}
 
-/* Maršrutų stiliai (Routing Profile) */
-.profile-selector { display: flex; gap: 8px; padding: 8px; }
-.profile-btn { flex: 1; padding: 8px 12px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: 0.2s; }
-.profile-btn:hover { background: #f1f5f9; color: #1e293b; }
-.profile-btn.active { background: #3b82f6; color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
-/* Hide specific directions, but keep distance/time summary */
+.pick-dest-btn {
+  background: #f7fbf9 !important;
+  color: var(--app-text);
+}
+
+.pick-dest-btn:hover {
+  background: var(--app-green-soft) !important;
+}
+
+.pick-dest-btn.active {
+  background: var(--app-green) !important;
+  color: white;
+}
+
+.clear-route-btn {
+  background: #fef2f2 !important;
+  color: #ef4444 !important;
+}
+
+.clear-route-btn:hover {
+  background: #fee2e2 !important;
+}
+
+.profile-selector {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+}
+
+.profile-btn {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 12px;
+  transition: 0.2s;
+}
+
+.profile-btn:hover {
+  background: #f7fbf9;
+  color: var(--app-text);
+}
+
+.profile-btn.active {
+  background: var(--app-green);
+  color: white;
+  box-shadow: 0 4px 10px rgba(23, 96, 67, 0.24);
+}
+
 .leaflet-routing-alt table {
   display: none !important;
 }
-/* Žymekliai ir pop-up'ai */
-.place-address { font-size: 16px; font-weight: 600; color: #0f172a; margin: 4px 0; word-break: break-word; }
-.place-coords { font-size: 13px; color: #64748b; margin: 0; }
-.leaflet-popup-content-wrapper { border-radius: 16px !important; box-shadow: 0 15px 35px -5px rgba(0,0,0,0.15) !important; border: 1px solid #f1f5f9; padding: 4px; }
-.leaflet-popup-content { font-family: 'Inter', sans-serif !important; }
 
-/* Palyginimo modulis ("Comparison Dashboard") */
+.place-address {
+  margin: 4px 0;
+  color: var(--app-text);
+  font-size: 16px;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.place-coords {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 13px;
+}
+
+.leaflet-popup-content-wrapper {
+  border: 1px solid #dbe6e1;
+  border-radius: 8px !important;
+  box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.15) !important;
+  padding: 4px;
+}
+
+.leaflet-popup-content {
+  font-family: Inter, sans-serif !important;
+}
+
 .comparison-dashboard {
-  margin: 0 16px 32px 16px;
-  background: white;
-  border-radius: 24px;
-  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05);
-  border: 1px solid #f1f5f9;
+  margin: 0 16px 32px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-panel-solid);
+  box-shadow: var(--app-shadow);
   padding: 60px 40px;
 }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 760px) {
+  .map-wrapper {
+    width: calc(100% - 16px);
+    height: 78vh;
+    margin: 8px auto 18px;
+  }
+
+  .top-left,
+  .top-right {
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+
+  .top-right {
+    top: auto;
+    bottom: 20px;
+    max-height: 44%;
+  }
+
+  .side-panel {
+    right: -100%;
+    width: min(100%, 420px);
+  }
+
+  .comparison-dashboard {
+    margin: 0 8px 24px;
+    padding: 32px 16px;
+  }
 }

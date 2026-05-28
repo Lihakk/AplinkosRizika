@@ -242,9 +242,9 @@ const MAP_FEATURES = [
   { id: 'health-facilities', label: 'Ligoninės', icon: '🏥', color: '#ef4444' },
   { id: 'parks', label: 'Parkai', icon: '🌳', color: '#10b981' },
   { id: 'playgrounds', label: 'Aikštelės', icon: '🛝', color: '#f59e0b' },
-  { id: 'shops', label: 'Parduotuvės', icon: '🛒', color: '#3b82f6' },
-  { id: 'gas-stations', label: 'Degalinės', icon: '⛽', color: '#6366f1' },
-  { id: 'sports-clubs', label: 'Sporto klubai', icon: '🏋️', color: '#8b5cf6' },
+  { id: 'shops', label: 'Parduotuvės', icon: '🛒', color: '#1d6f91' },
+  { id: 'gas-stations', label: 'Degalinės', icon: '⛽', color: '#d9951a' },
+  { id: 'sports-clubs', label: 'Sporto klubai', icon: '🏋️', color: '#176043' },
   { id: 'real-estate', label: '🏠 Skelbimai', icon: '🏠', color: '#10b981' }
 ];
 
@@ -910,7 +910,7 @@ export default function MapPage() {
   // --- MEMOIZED MAP LAYERS TO FIX RE-RENDER SLOWNESS ---
   const eldershipLayers = useMemo(() => {
     return elderships.map((e, i) => e.geometry ? (
-      <GeoJSON key={`eldership-${i}`} data={e.geometry} style={{ color: "#3b82f6", weight: 2, fillOpacity: 0.03, dashArray: '5, 5' }}
+      <GeoJSON key={`eldership-${i}`} data={e.geometry} style={{ color: "#176043", weight: 2, fillOpacity: 0.03, dashArray: '5, 5' }}
         onEachFeature={(_, layer) => layer.bindPopup(`<strong style="font-family:'Inter',sans-serif;font-size:15px;">${e.eldership_Name}</strong>`)} />
     ) : null);
   }, [elderships]);
@@ -960,7 +960,7 @@ export default function MapPage() {
           <div style={{ fontFamily: "'Inter', sans-serif" }}>
             <div style={{ fontWeight: '800', fontSize: '14px', marginBottom: 8, color: '#0f172a' }}>{s.name || "Mokykla"}</div>
             <div style={{ fontSize: '13px', color: '#475569', marginBottom: 4 }}>Tipas: <strong style={{ color: '#0f172a' }}>{s.type ? SCHOOL_TYPE_LABELS[s.type as SchoolType] : 'Nežinomas'}</strong></div>
-            <div style={{ fontSize: '13px', color: '#475569' }}>Reitingas: <strong style={{ color: '#3b82f6' }}>{Number(s.rating).toFixed(1)}</strong></div>
+            <div style={{ fontSize: '13px', color: '#475569' }}>Reitingas: <strong style={{ color: '#176043' }}>{Number(s.rating).toFixed(1)}</strong></div>
           </div>
         </Popup>
       </Marker>
@@ -1126,7 +1126,7 @@ export default function MapPage() {
             onDestPicked={handleDestPicked}
           />
 
-          {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
+          {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#176043", weight: 6, opacity: 0.82 }} />}
 
           {eldershipLayers}
           {crimeGridLayers}
@@ -1149,8 +1149,8 @@ export default function MapPage() {
                     {loadingArrivals ? <p className="text-sm text-slate-400 italic">Kraunama...</p> : stopArrivals.length > 0 ? (
                       <ul className="flex flex-col gap-1 p-0 m-0 list-none">
                         {stopArrivals.map((a, idx) => (
-                          <li key={idx} className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors" onClick={(e) => { e.stopPropagation(); if (a.shapeId) handleShowPath(a.shapeId); }}>
-                            <span className="bg-blue-600 text-white font-bold text-xs py-1 px-2 rounded">{a.route}</span>
+                          <li key={idx} className="flex items-center gap-3 p-2 rounded-lg hover:bg-emerald-50 cursor-pointer transition-colors" onClick={(e) => { e.stopPropagation(); if (a.shapeId) handleShowPath(a.shapeId); }}>
+                            <span className="bg-emerald-700 text-white font-bold text-xs py-1 px-2 rounded">{a.route}</span>
                             <div className="flex flex-col">
                               <strong className="text-slate-900 text-sm leading-tight">{a.time?.substring(0, 5) || "--:--"}</strong>
                               <span className="text-slate-500 text-xs leading-tight truncate max-w-[120px]">{a.destination}</span>
@@ -1186,7 +1186,7 @@ export default function MapPage() {
               <h2 className="m-0 text-xl font-black">Vietos Analizė</h2>
               {selectedPlace && (
                 <button
-                  className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-xs font-bold"
+                  className="bg-[#17211d] text-white p-2 rounded-lg hover:bg-[#176043] transition-all flex items-center gap-2 text-xs font-bold"
                   onClick={() => navigate(`/analysis?lat=${selectedPlace.latlng.lat}&lon=${selectedPlace.latlng.lng}&address=${encodeURIComponent(selectedPlace.name)}`)}
                 >
                   <ExternalLink size={14} /> Atidaryti išsamią analizę
@@ -1204,9 +1204,9 @@ export default function MapPage() {
             {selectedPlace && <div className="hidden"><WalkScore latlng={selectedPlace.latlng} onScore={setWalkScoreValue} /></div>}
 
             {selectedPlace && qualityOfLifeScore !== null && (
-              <div className="stat-card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
-                <h3 className="text-blue-800">Gyvenimo kokybės balas</h3>
-                <p className="text-4xl font-black text-blue-600 m-0">{qualityOfLifeScore}<span className="text-xl text-blue-400 font-medium">/100</span></p>
+              <div className="stat-card bg-[#e7f3ee] border-[#c5d3cc]">
+                <h3 className="text-[#176043]">Gyvenimo kokybės balas</h3>
+                <p className="text-4xl font-black text-[#176043] m-0">{qualityOfLifeScore}<span className="text-xl text-[#697a74] font-medium">/100</span></p>
               </div>
             )}
 
@@ -1219,7 +1219,7 @@ export default function MapPage() {
                 {stopFrequency.length > 0 ? (
                   <>
                     <div className="flex items-baseline gap-2 mb-4">
-                      <span className="text-3xl font-black text-indigo-600">
+                      <span className="text-3xl font-black text-[#1d6f91]">
                         {(stopFrequency.reduce((acc, curr) => acc + curr.count, 0) / stopFrequency.length).toFixed(1)}
                       </span>
                       <span className="text-xs text-slate-500 font-medium uppercase tracking-wide">autob. / val.</span>
@@ -1227,7 +1227,7 @@ export default function MapPage() {
                     <div className="flex items-end h-16 gap-1 border-b border-slate-200 mt-2">
                       {stopFrequency.map((f, i) => (
                         <div key={i} className="flex-1 flex flex-col items-center h-full group relative">
-                          <div className="w-full bg-indigo-500 rounded-t-sm transition-all duration-300 group-hover:bg-indigo-400" style={{ height: `${Math.max(4, (f.count / 15) * 100)}%` }} />
+                          <div className="w-full bg-[#1d6f91] rounded-t-sm transition-all duration-300 group-hover:bg-[#176043]" style={{ height: `${Math.max(4, (f.count / 15) * 100)}%` }} />
                           <span className="text-[9px] text-slate-400 mt-1 font-medium">{f.hour}</span>
                           <div className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-slate-800 text-white text-[10px] py-1 px-2 rounded pointer-events-none transition-opacity z-10 whitespace-nowrap">
                             {f.count} autob.
@@ -1263,7 +1263,7 @@ export default function MapPage() {
                               <div className="text-xs text-slate-500 truncate max-w-[140px] mt-0.5">{feature.name}</div>
                             </div>
                           </div>
-                          <div className="font-black text-blue-600 text-sm bg-blue-50 py-1 px-2 rounded-lg">
+                          <div className="font-black text-[#176043] text-sm bg-[#e7f3ee] py-1 px-2 rounded-lg">
                             {feature.distance < 1000 ? `${Math.round(feature.distance)} m` : `${(feature.distance / 1000).toFixed(1)} km`}
                           </div>
                         </li>
@@ -1279,7 +1279,7 @@ export default function MapPage() {
         {isRoutingLoading && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 99999, backgroundColor: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '32px' }}>
             <div style={{ background: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-              <svg style={{ animation: 'spin 1s linear infinite', height: '40px', width: '40px', color: '#2563eb' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <svg style={{ animation: 'spin 1s linear infinite', height: '40px', width: '40px', color: '#176043' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
@@ -1304,17 +1304,17 @@ export default function MapPage() {
         </div>
 
         <div className="flex flex-col md:flex-row justify-center items-center gap-6 mb-16">
-          <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-2 w-full md:w-[320px] flex items-center transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500">
+          <div className="bg-white border border-[#c5d3cc] shadow-sm rounded-lg p-2 w-full md:w-[320px] flex items-center transition-all focus-within:ring-2 focus-within:ring-emerald-700/20 focus-within:border-[#176043]">
             <input type="text" placeholder="Pirmo adreso paieška..." value={compQuery1} onChange={(e) => setCompQuery1(e.target.value)} onKeyDown={(e) => e.key === "Enter" && startComparison()} className="w-full bg-transparent border-none outline-none px-3 py-2 text-slate-900 font-medium placeholder-slate-400" />
           </div>
 
           <div className="text-sm font-black text-slate-300 bg-slate-100 rounded-full px-4 py-2 uppercase tracking-widest">Palyginti su</div>
 
-          <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-2 w-full md:w-[320px] flex items-center transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500">
+          <div className="bg-white border border-[#c5d3cc] shadow-sm rounded-lg p-2 w-full md:w-[320px] flex items-center transition-all focus-within:ring-2 focus-within:ring-emerald-700/20 focus-within:border-[#176043]">
             <input type="text" placeholder="Antro adreso paieška..." value={compQuery2} onChange={(e) => setCompQuery2(e.target.value)} onKeyDown={(e) => e.key === "Enter" && startComparison()} className="w-full bg-transparent border-none outline-none px-3 py-2 text-slate-900 font-medium placeholder-slate-400" />
           </div>
 
-          <button onClick={startComparison} disabled={!compQuery1.trim() || !compQuery2.trim() || isComparisonLoading} className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold py-3.5 px-8 rounded-xl transition-all shadow-lg shadow-blue-600/20 disabled:shadow-none flex items-center gap-2">
+          <button onClick={startComparison} disabled={!compQuery1.trim() || !compQuery2.trim() || isComparisonLoading} className="bg-[#17211d] hover:bg-[#176043] disabled:bg-slate-300 text-white font-bold py-3.5 px-8 rounded-lg transition-all shadow-lg shadow-emerald-900/10 disabled:shadow-none flex items-center gap-2">
             {isComparisonLoading ? (
               <>
                 <svg style={{ animation: 'spin 1s linear infinite', height: '20px', width: '20px' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1335,34 +1335,34 @@ export default function MapPage() {
         {isComparing && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
             {/* Column 1 */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500" />
+            <div className="bg-white rounded-lg border border-[#c5d3cc] p-8 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-[#176043]" />
               <h3 className="text-2xl font-bold text-slate-900 mb-8 truncate pr-8" title={compPlace1?.name}>{compPlace1?.name}</h3>
 
               <div className="flex gap-4 mb-8">
-                <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
+                <div className="bg-[#f7fbf9] p-4 rounded-lg flex-1 text-center border border-[#dbe6e1]">
                   <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Pasiekiamumas</div>
-                  <div className="text-3xl font-black text-blue-600">{place1Analysis?.totalScore || 0}</div>
+                  <div className="text-3xl font-black text-[#176043]">{place1Analysis?.totalScore || 0}</div>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
+                <div className="bg-[#f7fbf9] p-4 rounded-lg flex-1 text-center border border-[#dbe6e1]">
                   <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Saugumas</div>
                   <div className={`text-3xl font-black ${place1CrimeScore && place1CrimeScore > 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{place1CrimeScore !== null ? place1CrimeScore : 'Nėra'}</div>
                 </div>
-                <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl flex-1 text-center">
-                  <div className="text-[10px] text-blue-800 uppercase font-black tracking-wider mb-2">Gyvenimo kokybė</div>
-                  <div className="text-4xl font-black text-blue-700">{Math.round(((place1Analysis?.totalScore || 0) + (place1WalkScore || 0) + (place1CrimeScore || 0)) / 3) || 0}</div>
+                <div className="bg-[#e7f3ee] border border-[#c5d3cc] p-4 rounded-lg flex-1 text-center">
+                  <div className="text-[10px] text-[#176043] uppercase font-black tracking-wider mb-2">Gyvenimo kokybė</div>
+                  <div className="text-4xl font-black text-[#176043]">{Math.round(((place1Analysis?.totalScore || 0) + (place1WalkScore || 0) + (place1CrimeScore || 0)) / 3) || 0}</div>
                 </div>
               </div>
 
               {place1Analysis && (
                 <ul className="flex flex-col gap-3 m-0 p-0 list-none">
                   {place1Analysis.features.map((f, i) => (
-                    <li key={i} className="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+                    <li key={i} className="flex justify-between items-center p-4 bg-white rounded-lg border border-[#dbe6e1] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl bg-slate-50 p-2 rounded-lg">{f.icon}</span>
                         <span className="font-semibold text-slate-800">{f.type}</span>
                       </div>
-                      <span className="font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg text-sm">
+                      <span className="font-black text-[#176043] bg-[#e7f3ee] px-3 py-1.5 rounded-lg text-sm">
                         {f.distance < 1000 ? `${Math.round(f.distance)} m` : `${(f.distance / 1000).toFixed(1)} km`}
                       </span>
                     </li>
@@ -1372,20 +1372,20 @@ export default function MapPage() {
             </div>
 
             {/* Column 2 */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm relative overflow-hidden">
+            <div className="bg-white rounded-lg border border-[#c5d3cc] p-8 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1.5 bg-rose-500" />
               <h3 className="text-2xl font-bold text-slate-900 mb-8 truncate pr-8" title={compPlace2?.name}>{compPlace2?.name}</h3>
 
               <div className="flex gap-4 mb-8">
-                <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
+                <div className="bg-[#f7fbf9] p-4 rounded-lg flex-1 text-center border border-[#dbe6e1]">
                   <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Pasiekiamumas</div>
                   <div className="text-3xl font-black text-rose-500">{place2Analysis?.totalScore || 0}</div>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl flex-1 text-center border border-slate-100">
+                <div className="bg-[#f7fbf9] p-4 rounded-lg flex-1 text-center border border-[#dbe6e1]">
                   <div className="text-[10px] text-slate-500 uppercase font-black tracking-wider mb-2">Saugumas</div>
                   <div className={`text-3xl font-black ${place2CrimeScore && place2CrimeScore > 50 ? 'text-emerald-500' : 'text-rose-500'}`}>{place2CrimeScore !== null ? place2CrimeScore : 'Nėra'}</div>
                 </div>
-                <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl flex-1 text-center">
+                <div className="bg-rose-50 border border-rose-100 p-4 rounded-lg flex-1 text-center">
                   <div className="text-[10px] text-rose-800 uppercase font-black tracking-wider mb-2">Gyvenimo kokybė</div>
                   <div className="text-4xl font-black text-rose-700">{Math.round(((place2Analysis?.totalScore || 0) + (place2WalkScore || 0) + (place2CrimeScore || 0)) / 3) || 0}</div>
                 </div>
@@ -1394,7 +1394,7 @@ export default function MapPage() {
               {place2Analysis && (
                 <ul className="flex flex-col gap-3 m-0 p-0 list-none">
                   {place2Analysis.features.map((f, i) => (
-                    <li key={i} className="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+                    <li key={i} className="flex justify-between items-center p-4 bg-white rounded-lg border border-[#dbe6e1] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl bg-slate-50 p-2 rounded-lg">{f.icon}</span>
                         <span className="font-semibold text-slate-800">{f.type}</span>
