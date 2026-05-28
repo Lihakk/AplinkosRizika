@@ -367,6 +367,7 @@
 .profile-btn { flex: 1; padding: 8px 12px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: 0.2s; }
 .profile-btn:hover { background: #f1f5f9; color: #1e293b; }
 .profile-btn.active { background: #3b82f6; color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+/* Hide specific directions, but keep distance/time summary */
 .leaflet-routing-alt table {
   display: none !important;
 }
@@ -384,4 +385,9 @@
   box-shadow: 0 20px 40px -10px rgba(0,0,0,0.05);
   border: 1px solid #f1f5f9;
   padding: 60px 40px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

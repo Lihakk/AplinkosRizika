@@ -42,7 +42,7 @@ export default function WalkScore({ latlng, onScore }: WalkScoreProps) {
       })
       .catch(() => {
         if (!cancelled) {
-          setResult({ key: pointKey, score: null, error: "Nepavyko gauti duomenų" });
+          setResult({ key: pointKey, score: null, error: "" });
           onScore?.(null);
         }
       });

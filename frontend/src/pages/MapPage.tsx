@@ -396,6 +396,16 @@ export default function MapPage() {
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
 
   const [isComparing, setIsComparing] = useState(false);
+  const [isComparisonLoading, setIsComparisonLoading] = useState(false);
+  const [isRoutingLoading, setIsRoutingLoading] = useState(false);
+  const routingLoadingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showRoutingLoading = () => {
+    if (routingLoadingTimer.current) clearTimeout(routingLoadingTimer.current);
+    setIsRoutingLoading(true);
+    routingLoadingTimer.current = setTimeout(() => setIsRoutingLoading(false), 500);
+  };
+
   const [place1Analysis, setPlace1Analysis] = useState<AccessibilityData | null>(null);
   const [place2Analysis, setPlace2Analysis] = useState<AccessibilityData | null>(null);
   const [place1WalkScore, setPlace1WalkScore] = useState<number | null>(null);
@@ -656,6 +666,7 @@ export default function MapPage() {
 
   const handleRouteSearch = async () => {
     if (!searchQuery.trim() || !destQuery.trim()) return;
+    showRoutingLoading();
     setIsLoading(p => ({ ...p, search: true }));
     try {
       const start = await resolveLocationInput(searchQuery, true);
@@ -681,6 +692,7 @@ export default function MapPage() {
   };
 
   const handleDestPicked = (latlng: LatLng, address: string) => {
+    showRoutingLoading();
     setRouteEnd(latlng);
     setDestQuery(address);
     setPickingDest(false);
@@ -718,6 +730,7 @@ export default function MapPage() {
       return;
     }
 
+    setIsComparisonLoading(true);
     try {
       const [latlng1, latlng2] = await Promise.all([
         resolveLocationInput(compQuery1),
@@ -733,6 +746,9 @@ export default function MapPage() {
       setCompPlace2({ latlng: latlng2.latlng, name: latlng2.label });
 
       setIsComparing(true);
+
+      setRouteStart(new L.LatLng(54.90731, 23.94094));                                                                       
+      setRouteEnd(new L.LatLng(54.90591, 23.94158));
 
       const [res1, res2] = await Promise.all([
         fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng1.latlng.lat}&lon=${latlng1.latlng.lng}`),
@@ -758,6 +774,8 @@ export default function MapPage() {
     } catch (e) {
       console.error("Comparison fetch failed", e);
       alert("Įvyko klaida lyginant vietas.");
+    } finally {
+      setIsComparisonLoading(false);
     }
 
     setTimeout(() => {
@@ -889,6 +907,65 @@ export default function MapPage() {
     if (parts.length === 0) return null;
     return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
   }, [walkScoreValue, accessibilityData, crimeSafetyScore]);
+  // --- MEMOIZED MAP LAYERS TO FIX RE-RENDER SLOWNESS ---
+  const eldershipLayers = useMemo(() => {
+    return elderships.map((e, i) => e.geometry ? (
+      <GeoJSON key={`eldership-${i}`} data={e.geometry} style={{ color: "#3b82f6", weight: 2, fillOpacity: 0.03, dashArray: '5, 5' }}
+        onEachFeature={(_, layer) => layer.bindPopup(`<strong style="font-family:'Inter',sans-serif;font-size:15px;">${e.eldership_Name}</strong>`)} />
+    ) : null);
+  }, [elderships]);
+
+  const crimeGridLayers = useMemo(() => {
+    return processedCrimeData.map((e, i) => {
+      const geometry = e.geometry ?? e.Geometry;
+      if (!geometry) return null;
+      return (
+        <GeoJSON
+          key={`crime-${i}`}
+          data={geometry}
+          style={{ fillColor: getCrimeColor(e.combined / maxValue), color: "white", weight: 1.5, opacity: 0.9, fillOpacity: 0.6 }}
+          onEachFeature={(_, layer) => {
+            layer.on('click', () => { crimeLayerRef.current = layer; setSelectedCrimeEldership(e); });
+          }}
+        />
+      );
+    });
+  }, [processedCrimeData, maxValue]);
+
+  const featureMarkerLayers = useMemo(() => {
+    return MAP_FEATURES.map(config => {
+      if (!activeFeatures[config.id] || !featureLayers[config.id]) return null;
+      return featureLayers[config.id].map((feature, i) => {
+        const centerPoint = getFeatureCenter(feature.geometry);
+        if (!centerPoint) return null;
+        return (
+          <Marker key={`${config.id}-${feature.id}-${i}`} position={centerPoint} icon={createFeatureIcon(config.icon, config.color)}>
+            <Popup>
+              <div style={{ textAlign: 'center', fontFamily: "'Inter', sans-serif", padding: '4px' }}>
+                <span style={{ fontSize: '28px', display: 'block', marginBottom: '8px' }}>{config.icon}</span>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', color: '#0f172a' }}>{feature.name || "Nežinomas objektas"}</h3>
+                <p style={{ margin: '0', color: '#64748b', fontSize: '12px', textTransform: 'capitalize', fontWeight: 500 }}>{feature.type || config.id}</p>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      });
+    });
+  }, [activeFeatures, featureLayers]);
+
+  const schoolLayers = useMemo(() => {
+    return filteredSchools.map((s) => (
+      <Marker key={s.school_Id} position={[s.location.coordinates[1], s.location.coordinates[0]]} icon={schoolIcon}>
+        <Popup>
+          <div style={{ fontFamily: "'Inter', sans-serif" }}>
+            <div style={{ fontWeight: '800', fontSize: '14px', marginBottom: 8, color: '#0f172a' }}>{s.name || "Mokykla"}</div>
+            <div style={{ fontSize: '13px', color: '#475569', marginBottom: 4 }}>Tipas: <strong style={{ color: '#0f172a' }}>{s.type ? SCHOOL_TYPE_LABELS[s.type as SchoolType] : 'Nežinomas'}</strong></div>
+            <div style={{ fontSize: '13px', color: '#475569' }}>Reitingas: <strong style={{ color: '#3b82f6' }}>{Number(s.rating).toFixed(1)}</strong></div>
+          </div>
+        </Popup>
+      </Marker>
+    ));
+  }, [filteredSchools]);
 
   return (
     <div className={`map-page-container ${pickingDest ? "map-picking-dest" : ""}`}>
@@ -1051,56 +1128,10 @@ export default function MapPage() {
 
           {selectedPath && <GeoJSON data={selectedPath} style={{ color: "#3b82f6", weight: 6, opacity: 0.8 }} />}
 
-          {elderships.map((e, i) => e.geometry ? (
-            <GeoJSON key={`eldership-${i}`} data={e.geometry} style={{ color: "#3b82f6", weight: 2, fillOpacity: 0.03, dashArray: '5, 5' }}
-              onEachFeature={(_, layer) => layer.bindPopup(`<strong style="font-family:'Inter',sans-serif;font-size:15px;">${e.eldership_Name}</strong>`)} />
-          ) : null)}
-
-          {processedCrimeData.map((e, i) => {
-            const geometry = e.geometry ?? e.Geometry;
-            if (!geometry) return null;
-            return (
-              <GeoJSON
-                key={`crime-${i}`}
-                data={geometry}
-                style={{ fillColor: getCrimeColor(e.combined / maxValue), color: "white", weight: 1.5, opacity: 0.9, fillOpacity: 0.6 }}
-                onEachFeature={(_, layer) => {
-                  layer.on('click', () => { crimeLayerRef.current = layer; setSelectedCrimeEldership(e); });
-                }}
-              />
-            );
-          })}
-
-          {MAP_FEATURES.map(config => {
-            if (!activeFeatures[config.id] || !featureLayers[config.id]) return null;
-            return featureLayers[config.id].map((feature, i) => {
-              const centerPoint = getFeatureCenter(feature.geometry);
-              if (!centerPoint) return null;
-              return (
-                <Marker key={`${config.id}-${feature.id}-${i}`} position={centerPoint} icon={createFeatureIcon(config.icon, config.color)}>
-                  <Popup>
-                    <div style={{ textAlign: 'center', fontFamily: "'Inter', sans-serif", padding: '4px' }}>
-                      <span style={{ fontSize: '28px', display: 'block', marginBottom: '8px' }}>{config.icon}</span>
-                      <h3 style={{ margin: '0 0 4px 0', fontSize: '15px', color: '#0f172a' }}>{feature.name || "Nežinomas objektas"}</h3>
-                      <p style={{ margin: '0', color: '#64748b', fontSize: '12px', textTransform: 'capitalize', fontWeight: 500 }}>{feature.type || config.id}</p>
-                    </div>
-                  </Popup>
-                </Marker>
-              );
-            });
-          })}
-
-          {filteredSchools.map((s) => (
-            <Marker key={s.school_Id} position={[s.location.coordinates[1], s.location.coordinates[0]]} icon={schoolIcon}>
-              <Popup>
-                <div style={{ fontFamily: "'Inter', sans-serif" }}>
-                  <div style={{ fontWeight: '800', fontSize: '14px', marginBottom: 8, color: '#0f172a' }}>{s.name || "Mokykla"}</div>
-                  <div style={{ fontSize: '13px', color: '#475569', marginBottom: 4 }}>Tipas: <strong style={{ color: '#0f172a' }}>{s.type ? SCHOOL_TYPE_LABELS[s.type as SchoolType] : 'Nežinomas'}</strong></div>
-                  <div style={{ fontSize: '13px', color: '#475569' }}>Reitingas: <strong style={{ color: '#3b82f6' }}>{Number(s.rating).toFixed(1)}</strong></div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          {eldershipLayers}
+          {crimeGridLayers}
+          {featureMarkerLayers}
+          {schoolLayers}
 
           {closestPolice && (
             <Marker position={closestPolice.latlng} icon={divIcon({ html: '<div style="font-size: 26px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));">👮‍♂️</div>', className: 'police-icon', iconSize: [28, 28], iconAnchor: [14, 28] })}>
@@ -1170,7 +1201,7 @@ export default function MapPage() {
               </div>
             )}
 
-            {selectedPlace && <WalkScore latlng={selectedPlace.latlng} onScore={setWalkScoreValue} />}
+            {selectedPlace && <div className="hidden"><WalkScore latlng={selectedPlace.latlng} onScore={setWalkScoreValue} /></div>}
 
             {selectedPlace && qualityOfLifeScore !== null && (
               <div className="stat-card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
@@ -1244,6 +1275,19 @@ export default function MapPage() {
             )}
           </div>
         </div>
+
+        {isRoutingLoading && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 99999, backgroundColor: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '32px' }}>
+            <div style={{ background: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <svg style={{ animation: 'spin 1s linear infinite', height: '40px', width: '40px', color: '#2563eb' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span style={{ fontWeight: 600, color: '#1e293b' }}>Ieškomas maršrutas...</span>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {selectedPath && (
@@ -1270,8 +1314,18 @@ export default function MapPage() {
             <input type="text" placeholder="Antro adreso paieška..." value={compQuery2} onChange={(e) => setCompQuery2(e.target.value)} onKeyDown={(e) => e.key === "Enter" && startComparison()} className="w-full bg-transparent border-none outline-none px-3 py-2 text-slate-900 font-medium placeholder-slate-400" />
           </div>
 
-          <button onClick={startComparison} disabled={!compQuery1.trim() || !compQuery2.trim()} className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold py-3.5 px-8 rounded-xl transition-all shadow-lg shadow-blue-600/20 disabled:shadow-none flex items-center gap-2">
-            📊 Palyginti
+          <button onClick={startComparison} disabled={!compQuery1.trim() || !compQuery2.trim() || isComparisonLoading} className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold py-3.5 px-8 rounded-xl transition-all shadow-lg shadow-blue-600/20 disabled:shadow-none flex items-center gap-2">
+            {isComparisonLoading ? (
+              <>
+                <svg style={{ animation: 'spin 1s linear infinite', height: '20px', width: '20px' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Kraunama...
+              </>
+            ) : (
+              <>📊 Palyginti</>
+            )}
           </button>
         </div>
 
