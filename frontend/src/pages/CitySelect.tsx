@@ -1,13 +1,65 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Bus, MapPin, School, Search, Shield } from "lucide-react";
+import { ArrowRight, Bus, Mail, MapPin, School, Search, Shield, X } from "lucide-react";
 import "./CitySelect.css";
 
 const allCities = ["Kaunas", "Vilnius"].sort();
 
+type InfoPanelKey = "privacy" | "faq" | "contacts";
+
+const infoPanels: Record<InfoPanelKey, {
+  title: string;
+  eyebrow: string;
+  content: ReactNode;
+}> = {
+  privacy: {
+    eyebrow: "Duomenų apsauga",
+    title: "Privatumas",
+    content: (
+      <>
+        <p>
+          AplinkosRizika yra akademinis miesto analizės projektas. Sistema naudoja viešus ir demonstracinius duomenis:
+          seniūnijų ribas, OSM infrastruktūrą, transporto informaciją, mokyklų duomenis, nusikalstamumo suvestines ir NT skelbimų informaciją.
+        </p>
+        <p>
+          Įvesti adresai naudojami tik vietos analizei ir žemėlapio rezultatams apskaičiuoti. Prisijungimo ar mokėjimo duomenų ši demonstracinė versija nerenka.
+        </p>
+      </>
+    ),
+  },
+  faq: {
+    eyebrow: "Dažniausi klausimai",
+    title: "D.U.K.",
+    content: (
+      <>
+        <p><strong>Kaip skaičiuojamas vietos balas?</strong><br />Balas sudaromas iš pasiekiamumo, saugumo, viešojo transporto ir aplinkinių paslaugų rodiklių.</p>
+        <p><strong>Kodėl rodoma tik Kaunas ir Vilnius?</strong><br />Šiame etape projektas sukoncentruotas į miestus, kuriems turime pakankamai duomenų demonstracijai.</p>
+        <p><strong>Ar galima prijungti daugiau duomenų?</strong><br />Taip. Backend API struktūra leidžia vėliau prijungti papildomus miestus, duomenų sluoksnius ir rekomendacijų logiką.</p>
+      </>
+    ),
+  },
+  contacts: {
+    eyebrow: "Ryšys",
+    title: "Kontaktai",
+    content: (
+      <>
+        <p>
+          Projektas paruoštas universiteto pristatymui kaip miesto aplinkos rizikos ir gyvenamosios vietos vertinimo sistema.
+        </p>
+        <p className="info-contact-line">
+          <Mail size={18} />
+          Komandos kontaktas: <strong>pateikiamas pristatymo metu</strong>
+        </p>
+      </>
+    ),
+  },
+};
+
 export default function CitySelect() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeInfo, setActiveInfo] = useState<InfoPanelKey | null>(null);
+  const currentInfo = activeInfo ? infoPanels[activeInfo] : null;
 
   const filteredCities = allCities.filter((city) =>
     city.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -128,12 +180,31 @@ export default function CitySelect() {
             © 2026 AplinkosRizika. Akademiniam pristatymui paruošta miesto analizės sistema.
           </div>
           <div className="flex gap-8 text-[#697a74] font-bold text-sm">
-            <a href="#" className="hover:text-[#15201c] transition-colors">Privatumas</a>
-            <a href="#" className="hover:text-[#15201c] transition-colors">D.U.K.</a>
-            <a href="#" className="hover:text-[#15201c] transition-colors">Kontaktai</a>
+            <button type="button" className="footer-info-link" onClick={() => setActiveInfo("privacy")}>Privatumas</button>
+            <button type="button" className="footer-info-link" onClick={() => setActiveInfo("faq")}>D.U.K.</button>
+            <button type="button" className="footer-info-link" onClick={() => setActiveInfo("contacts")}>Kontaktai</button>
           </div>
         </div>
       </footer>
+
+      {currentInfo && (
+        <div className="info-modal-backdrop" role="presentation" onClick={() => setActiveInfo(null)}>
+          <section
+            className="info-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="info-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button type="button" className="info-modal-close" onClick={() => setActiveInfo(null)} aria-label="Uždaryti">
+              <X size={18} />
+            </button>
+            <span>{currentInfo.eyebrow}</span>
+            <h2 id="info-modal-title">{currentInfo.title}</h2>
+            <div className="info-modal-copy">{currentInfo.content}</div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

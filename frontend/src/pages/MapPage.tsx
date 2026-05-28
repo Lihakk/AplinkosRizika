@@ -747,9 +747,6 @@ export default function MapPage() {
 
       setIsComparing(true);
 
-      setRouteStart(new L.LatLng(54.90731, 23.94094));                                                                       
-      setRouteEnd(new L.LatLng(54.90591, 23.94158));
-
       const [res1, res2] = await Promise.all([
         fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng1.latlng.lat}&lon=${latlng1.latlng.lng}`),
         fetch(`${API_URL}/api/MapFeatures/evaluation?lat=${latlng2.latlng.lat}&lon=${latlng2.latlng.lng}`)
