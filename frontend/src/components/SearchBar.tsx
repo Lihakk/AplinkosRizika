@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LatLng } from "leaflet";
-import { Search, Navigation, X } from "lucide-react";
+import { Navigation, Search, X } from "lucide-react";
 import { geocode } from "../utils/geocoding";
 
 interface ExternalStart {
@@ -58,7 +58,7 @@ export default function SearchBar({ onStartResult, onRouteResult, onClear, exter
 
   const handleDestSearch = async () => {
     if (!startQuery.trim() || !destQuery.trim()) {
-      setError("Įveskite abu adresus");
+      setError("Įveskite abu adresus.");
       return;
     }
     setLoading(true);
@@ -104,8 +104,8 @@ export default function SearchBar({ onStartResult, onRouteResult, onClear, exter
           type="text"
           placeholder={`${cityName} adresas...`}
           value={startQuery}
-          onChange={(e) => setStartQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleStartSearch()}
+          onChange={(event) => setStartQuery(event.target.value)}
+          onKeyDown={(event) => event.key === "Enter" && handleStartSearch()}
         />
         <button onClick={handleStartSearch} disabled={loading} title="Ieškoti">
           {loading ? "..." : <Search size={18} />}
@@ -130,8 +130,8 @@ export default function SearchBar({ onStartResult, onRouteResult, onClear, exter
             type="text"
             placeholder="Tikslo adresas..."
             value={destQuery}
-            onChange={(e) => setDestQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleDestSearch()}
+            onChange={(event) => setDestQuery(event.target.value)}
+            onKeyDown={(event) => event.key === "Enter" && handleDestSearch()}
           />
           <button onClick={handleDestSearch} disabled={loading}>
             {loading ? "..." : "Maršrutas"}

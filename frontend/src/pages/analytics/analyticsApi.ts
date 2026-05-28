@@ -378,7 +378,7 @@ export function getRecommendationProfiles(metrics: LiveEldershipMetric[]): Neigh
   return metrics.map((metric) => ({
     id: metric.id,
     name: metric.name,
-    summary: `${metric.name}: ${metric.publicTransportStops} stoteles, ${metric.parks} parkai, pasiekiamumo balas ${metric.averageAccessibilityScore}/100.`,
+    summary: `${metric.name}: ${metric.publicTransportStops} stotelės, ${metric.parks} parkai, pasiekiamumo balas ${metric.averageAccessibilityScore}/100.`,
     scores: {
       safety: Math.round(metric.safetyScore / 10),
       transport: Math.round(normalize(metric.publicTransportStops, maxStops) / 10),
@@ -388,8 +388,8 @@ export function getRecommendationProfiles(metrics: LiveEldershipMetric[]): Neigh
     medianPrice: 0,
     matchedSignals: [
       `${metric.safetyScore}/100 saugumo indeksas`,
-      `${metric.publicTransportStops} stoteles netoliese`,
-      `${metric.parks} parkai arba zalios zonos`,
+      `${metric.publicTransportStops} stotelės netoliese`,
+      `${metric.parks} parkai arba žaliosios zonos`,
     ],
   }));
 }
@@ -479,7 +479,7 @@ export async function getDeepEvaluation(address: string): Promise<DeepEvaluation
     safetyRating,
     crimeBreakdown: [
       { label: "Sveikata", value: Math.round((health / crimeTotal) * 100), color: "#8b5cf6" },
-      { label: "Vagystes", value: Math.round((theft / crimeTotal) * 100), color: "#ef4444" },
+      { label: "Vagystės", value: Math.round((theft / crimeTotal) * 100), color: "#ef4444" },
       { label: "Kita", value: Math.round((other / crimeTotal) * 100), color: "#64748b" },
     ],
     nearestPois: evaluation.features.map((feature, index) => ({
@@ -491,8 +491,8 @@ export async function getDeepEvaluation(address: string): Promise<DeepEvaluation
     transport: {
       walkScore: evaluation.totalScore,
       averageTripsPerHour: Number(averageTrips.toFixed(1)),
-      nearestStop: stops[0]?.name ?? stops[0]?.Name ?? "Stotele nerasta",
-      peakWindow: frequency.length ? `${frequency[0].hour ?? frequency[0].Hour}:00+` : "n/a",
+      nearestStop: stops[0]?.name ?? stops[0]?.Name ?? "Stotelė nerasta",
+      peakWindow: frequency.length ? `${frequency[0].hour ?? frequency[0].Hour}:00+` : "nėra duomenų",
     },
   };
 }

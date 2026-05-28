@@ -34,7 +34,7 @@ declare module "leaflet" {
 
     interface Control extends L.Control {
       setWaypoints(waypoints: L.LatLng[]): this;
-      on(type: string, fn: (e: any) => void, context?: any): this;
+      on(type: string, fn: (event: unknown) => void, context?: unknown): this;
     }
 
     function control(options: ControlOptions): Control;

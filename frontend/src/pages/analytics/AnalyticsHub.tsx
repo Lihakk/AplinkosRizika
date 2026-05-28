@@ -47,7 +47,7 @@ const metricDefinitions = [
 }>;
 
 function formatCurrency(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "n/a";
+  if (!Number.isFinite(value) || value <= 0) return "nenurodyta";
   return new Intl.NumberFormat("lt-LT", {
     style: "currency",
     currency: "EUR",
@@ -86,9 +86,9 @@ function PageFrame({
       <header className="analytics-topbar">
         <Link className="analytics-back" to="/">
           <ArrowLeft size={18} />
-          Pradzia
+          Pradžia
         </Link>
-        <nav className="analytics-nav" aria-label="Analytics Hub">
+        <nav className="analytics-nav" aria-label="Analitikos centras">
           {analyticsModules.map(({ path, title: moduleTitle }) => (
             <NavLink key={path} to={path}>
               {moduleTitle}
@@ -155,12 +155,12 @@ function useLiveElderships() {
       .then((data) => {
         if (cancelled) return;
         setMetrics(data);
-        setError(data.length ? null : "API grazino tuscia seniuniju rinkini.");
+        setError(data.length ? null : "API grąžino tuščią seniūnijų rinkinį.");
       })
       .catch((fetchError: unknown) => {
         if (cancelled) return;
         console.error(fetchError);
-        setError("Nepavyko ikelti seniuniju analitikos is API.");
+        setError("Nepavyko įkelti seniūnijų analitikos iš API.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -177,9 +177,9 @@ function useLiveElderships() {
 export function AnalyticsHomePage() {
   return (
     <PageFrame
-      eyebrow="Analytics Hub"
+      eyebrow="Analitikos centras"
       title="Analitiniai moduliai miesto sprendimams"
-      description="Keturi dashboardai prijungti prie esamu C# API endpointu ir klientines agregacijos."
+      description="Keturi interaktyvūs moduliai, prijungti prie C# API ir realių miesto duomenų."
     >
       <div className="analytics-module-grid">
         {analyticsModules.map(({ path, title, description, eyebrow, Icon }) => (
@@ -219,9 +219,9 @@ export function EldershipComparisonPage() {
 
   return (
     <PageFrame
-      eyebrow="Seniuniju palyginimas"
-      title="Teritoriju sveikatos lentele"
-      description="Gyvai jungia Eldership, Crimegrid, School, Transport ir MapFeatures endpointus."
+      eyebrow="Seniūnijų palyginimas"
+      title="Teritorijų sveikatos lentelė"
+      description="Gyvai jungia seniūnijų, nusikalstamumo, mokyklų, transporto ir OSM pasiekiamumo duomenis."
     >
       <section className="analytics-grid analytics-grid--sidebar">
         <aside className="glass-panel selector-panel">
@@ -241,14 +241,14 @@ export function EldershipComparisonPage() {
               </label>
             ))}
           </div>
-          <p className="panel-note">Minimaliai laikomi 2 pasirinkimai, kad palyginimas visada turetu konteksta.</p>
+          <p className="panel-note">Paliekami bent 2 pasirinkimai, kad palyginimas visada turėtų kontekstą.</p>
         </aside>
 
         <section className="glass-panel comparison-panel">
           <div className="panel-heading panel-heading--spread">
             <div>
               <span className="analytics-eyebrow">Gyvi rodikliai</span>
-              <h2>Side-by-side matrica</h2>
+              <h2>Palyginimo matrica</h2>
             </div>
             <StatChip label="Pasirinkta" value={`${selectedElderships.length}`} />
           </div>
@@ -256,7 +256,7 @@ export function EldershipComparisonPage() {
           {loading && <LoadingPanel />}
           {error && !loading && <ErrorPanel message={error} />}
           {!loading && !error && selectedElderships.length === 0 && (
-            <EmptyPanel message="Pasirinkite bent dvi seniunijas palyginimui." />
+            <EmptyPanel message="Pasirinkite bent dvi seniūnijas palyginimui." />
           )}
           {!loading && !error && selectedElderships.length > 0 && (
             <div className="comparison-table">
@@ -306,12 +306,12 @@ export function RealEstateAnalyticsPage() {
         if (cancelled) return;
         setListings(data);
         setActiveListingId(data[0]?.id ?? "");
-        setError(data.length ? null : "RealEstate/nearby endpointas grazino tuscia sarasa. Paleiskite scraperi arba padidinkite radius.");
+        setError(data.length ? null : "RealEstate/nearby endpointas grąžino tuščią sąrašą. Paleiskite duomenų rinkiklį arba padidinkite spindulį.");
       })
       .catch((fetchError: unknown) => {
         if (cancelled) return;
         console.error(fetchError);
-        setError("Nepavyko ikelti NT skelbimu is API.");
+        setError("Nepavyko įkelti NT skelbimų iš API.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -343,12 +343,12 @@ export function RealEstateAnalyticsPage() {
 
   return (
     <PageFrame
-      eyebrow="NT skelbimu analize"
-      title="Skelbimai su kaimynystes balu"
-      description="Naudoja RealEstate/nearby ir kiekvienam skelbimui prideda MapFeatures, Transport ir Crimegrid balus."
+      eyebrow="NT skelbimų analizė"
+      title="Skelbimai su kaimynystės balu"
+      description="Kiekvienam skelbimui pridedamas OSM, transporto ir nusikalstamumo pagrindu apskaičiuotas kaimynystės balas."
     >
       <section className="real-estate-layout">
-        <div className="glass-panel property-map" aria-label="Live property map">
+        <div className="glass-panel property-map" aria-label="NT skelbimų žemėlapis">
           <div className="map-toolbar">
             <Map size={20} />
             <strong>Kauno NT sluoksnis</strong>
@@ -373,11 +373,11 @@ export function RealEstateAnalyticsPage() {
         <div className="property-list">
           {loading && <LoadingPanel />}
           {error && !loading && <ErrorPanel message={error} />}
-          {!loading && !error && listings.length === 0 && <EmptyPanel message="NT skelbimu siame spindulyje nerasta." />}
+          {!loading && !error && listings.length === 0 && <EmptyPanel message="NT skelbimų šiame spindulyje nerasta." />}
           {!loading && !error && listings.map((listing) => {
             const score = averageScore(listing);
             const areaLabel = listing.area > 0 ? `${listing.area} m²` : "nenurodyta";
-            const squareMeterPrice = listing.area > 0 ? formatCurrency(Math.round(listing.price / listing.area)) : "n/a";
+            const squareMeterPrice = listing.area > 0 ? formatCurrency(Math.round(listing.price / listing.area)) : "nenurodyta";
             return (
               <article className="glass-panel property-card" key={listing.id}>
                 <div className="property-card-header">
@@ -393,13 +393,13 @@ export function RealEstateAnalyticsPage() {
                   <StatChip label="€/m²" value={squareMeterPrice} />
                 </div>
                 <div className="score-stack">
-                  <ScoreLine label="Walkability" value={listing.scores.walkability} />
-                  <ScoreLine label="Safety" value={listing.scores.safety} />
-                  <ScoreLine label="Services" value={listing.scores.services} />
+                  <ScoreLine label="Vaikščiojamumas" value={listing.scores.walkability} />
+                  <ScoreLine label="Saugumas" value={listing.scores.safety} />
+                  <ScoreLine label="Paslaugos" value={listing.scores.services} />
                 </div>
                 <button className="primary-action" onClick={() => setActiveListingId(listing.id)}>
                   <CircleDot size={17} />
-                  View 15-minute city radius
+                  Rodyti 15 minučių miesto spindulį
                 </button>
               </article>
             );
@@ -443,13 +443,13 @@ export function RecommendationPage() {
 
   return (
     <PageFrame
-      eyebrow="Ismanioji rekomendacija"
-      title="Rajonu atranka pagal jusu prioritetus"
-      description="Top 3 skaiciuojamas is gyvu seniuniju, nusikalstamumo, transporto, parku ir paslaugu duomenu."
+      eyebrow="Išmanioji rekomendacija"
+      title="Rajonų atranka pagal jūsų prioritetus"
+      description="Top 3 skaičiuojamas iš gyvų seniūnijų, nusikalstamumo, transporto, parkų ir paslaugų duomenų."
     >
       <section className="wizard-layout">
         <div className="glass-panel wizard-controls">
-          <div className="wizard-steps" aria-label="Recommendation steps">
+          <div className="wizard-steps" aria-label="Rekomendacijos žingsniai">
             {[1, 2, 3].map((item) => (
               <button className={step === item ? "active" : ""} key={item} onClick={() => setStep(item)}>
                 {step > item ? <Check size={16} /> : item}
@@ -465,10 +465,10 @@ export function RecommendationPage() {
           {step < 3 ? (
             <div className="slider-stack">
               {([
-                ["safety", "Safety", Shield],
-                ["transport", "Public Transport", TrainFront],
-                ["greenery", "Greenery", Leaf],
-                ["nightlife", "Nightlife/Shops", Building2],
+                ["safety", "Saugumas", Shield],
+                ["transport", "Viešasis transportas", TrainFront],
+                ["greenery", "Žaliosios erdvės", Leaf],
+                ["nightlife", "Paslaugos ir parduotuvės", Building2],
               ] as const).map(([key, label, Icon]) => (
                 <label className="priority-slider" key={key}>
                   <span>
@@ -488,8 +488,8 @@ export function RecommendationPage() {
             </div>
           ) : (
             <div className="result-preview">
-              <strong>{ranked[0]?.name ?? "Nera duomenu"}</strong>
-              <span>{ranked[0]?.matchScore ?? 0}% match</span>
+              <strong>{ranked[0]?.name ?? "Nėra duomenų"}</strong>
+              <span>{ranked[0]?.matchScore ?? 0}% atitiktis</span>
             </div>
           )}
 
@@ -498,7 +498,7 @@ export function RecommendationPage() {
               Atgal
             </button>
             <button className="primary-action" onClick={() => setStep((value) => Math.min(3, value + 1))}>
-              {step === 3 ? "Perskaiciuoti" : "Toliau"}
+              {step === 3 ? "Perskaičiuoti" : "Toliau"}
             </button>
           </div>
         </div>
@@ -506,21 +506,21 @@ export function RecommendationPage() {
         <div className="recommendation-results">
           {loading && <LoadingPanel />}
           {error && !loading && <ErrorPanel message={error} />}
-          {!loading && !error && ranked.length === 0 && <EmptyPanel message="Rekomendacijoms truksta API duomenu." />}
+          {!loading && !error && ranked.length === 0 && <EmptyPanel message="Rekomendacijoms trūksta API duomenų." />}
           {!loading && !error && ranked.map((item, index) => (
             <article className="glass-panel recommendation-card" key={item.id}>
               <div className="rank-number">{index + 1}</div>
               <div>
                 <div className="property-card-header">
                   <div>
-                    <span className="analytics-eyebrow">Top {index + 1}</span>
+                    <span className="analytics-eyebrow">Nr. {index + 1}</span>
                     <h2>{item.name}</h2>
                   </div>
                   <strong className={`score-badge score-badge--${scoreTone(item.matchScore)}`}>{item.matchScore}%</strong>
                 </div>
                 <p>{item.summary}</p>
                 <div className="property-stats">
-                  <StatChip label="Median €/m²" value={item.medianPrice ? formatCurrency(item.medianPrice) : "nera NT imties"} />
+                  <StatChip label="Mediana €/m²" value={item.medianPrice ? formatCurrency(item.medianPrice) : "nėra NT imties"} />
                   <StatChip label="Saugumas" value={`${item.scores.safety}/10`} />
                   <StatChip label="Transportas" value={`${item.scores.transport}/10`} />
                 </div>
@@ -542,7 +542,7 @@ export function RecommendationPage() {
 }
 
 export function DeepEvaluationDashboardPage() {
-  const [address, setAddress] = useState("Savanoriu pr. 42, Kaunas");
+  const [address, setAddress] = useState("Savanorių pr. 42, Kaunas");
   const [submittedAddress, setSubmittedAddress] = useState(address);
   const [evaluation, setEvaluation] = useState<DeepEvaluationPoint | null>(null);
   const [loading, setLoading] = useState(true);
@@ -559,7 +559,7 @@ export function DeepEvaluationDashboardPage() {
       .catch((fetchError: unknown) => {
         if (cancelled) return;
         console.error(fetchError);
-        setError("Nepavyko ikelti issamaus vietos vertinimo.");
+        setError("Nepavyko įkelti išsamaus vietos vertinimo.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -583,9 +583,9 @@ export function DeepEvaluationDashboardPage() {
 
   return (
     <PageFrame
-      eyebrow="Issamus vietos ivertinimas"
-      title="Vieno adreso 360° dashboardas"
-      description="Naudoja geokodavima, MapFeatures/evaluation, Transport ir Crimegrid endpointus."
+      eyebrow="Išsamus vietos įvertinimas"
+      title="Vieno adreso 360° apžvalga"
+      description="Naudoja geokodavimą, OSM pasiekiamumo vertinimą, transportą ir nusikalstamumo duomenis."
     >
       <section className="deep-dashboard">
         <form
@@ -613,7 +613,7 @@ export function DeepEvaluationDashboardPage() {
               <div className="panel-heading panel-heading--spread">
                 <div>
                   <span className="analytics-eyebrow">Saugumas</span>
-                  <h2>Rating ir nusikaltimu struktura</h2>
+                  <h2>Saugumo balas ir nusikaltimų struktūra</h2>
                 </div>
                 <Shield size={22} />
               </div>
@@ -656,12 +656,12 @@ export function DeepEvaluationDashboardPage() {
               <div className="panel-heading panel-heading--spread">
                 <div>
                   <span className="analytics-eyebrow">Susisiekimas</span>
-                  <h2>Transportas ir walk score</h2>
+                  <h2>Transportas ir vaikščiojamumas</h2>
                 </div>
                 <TrainFront size={22} />
               </div>
               <div className="transport-summary">
-                <StatChip label="Walk score" value={`${evaluation.transport.walkScore}/100`} />
+                <StatChip label="Vaikščiojamumas" value={`${evaluation.transport.walkScore}/100`} />
                 <StatChip label="Reisai / val." value={`${evaluation.transport.averageTripsPerHour}`} />
                 <StatChip label="Artimiausia stotele" value={evaluation.transport.nearestStop} />
                 <StatChip label="Piko langas" value={evaluation.transport.peakWindow} />

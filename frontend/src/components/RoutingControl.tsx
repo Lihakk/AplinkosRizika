@@ -76,7 +76,7 @@ export default function RoutingControl({ start, end, profile, hideEndMarker }: R
         controlRef.current = null;
       }
     };
-  }, [map, start, end, profile]);
+  }, [map, start, end, profile, hideEndMarker]);
 
   return null;
 }

@@ -300,7 +300,7 @@ export default function AnalysisPage() {
                     <ExternalLink size={16} />
                   </a>
                 ))}
-                {listings.length === 0 && <p className="empty-copy">Netoliese skelbimų nerasta arba scraperis dar neužpildė duomenų.</p>}
+                {listings.length === 0 && <p className="empty-copy">Netoliese skelbimų nerasta arba duomenų rinkiklis dar neužpildė bazės.</p>}
               </div>
             </div>
           )}
