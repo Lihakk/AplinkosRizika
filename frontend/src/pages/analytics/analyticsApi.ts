@@ -228,7 +228,7 @@ function normalizeEldership(value: unknown): RawEldership {
   const item = isRecord(value) ? value : {};
   return {
     id: readNumber(item.Eldership_Id ?? item.eldership_Id ?? item.eldership_id),
-    name: readString(item.Eldership_Name ?? item.eldership_Name ?? item.eldership_name ?? item.name, "Seniunija"),
+    name: readString(item.Eldership_Name ?? item.eldership_Name ?? item.eldership_name ?? item.name, "Seniūnija"),
     geometry: safeJsonParse<GeoJsonObject>(item.Geometry ?? item.geometry),
   };
 }
@@ -237,7 +237,7 @@ function normalizeCrime(value: unknown): RawCrime {
   const item = isRecord(value) ? value : {};
   return {
     id: readNumber(item.Eldership_Id ?? item.eldership_Id ?? item.eldership_id),
-    name: readString(item.Eldership_Name ?? item.eldership_Name ?? item.eldership_name ?? item.name, "Seniunija"),
+    name: readString(item.Eldership_Name ?? item.eldership_Name ?? item.eldership_name ?? item.name, "Seniūnija"),
     cityId: readNumber(item.City_id ?? item.City_Id ?? item.city_Id ?? item.cityId ?? item.city_id, 0) || undefined,
     health: readNumber(item.Health_Total ?? item.health_Total ?? item.health_total ?? item.Health),
     theft: readNumber(item.Theft_Total ?? item.theft_Total ?? item.theft_total ?? item.Theft),

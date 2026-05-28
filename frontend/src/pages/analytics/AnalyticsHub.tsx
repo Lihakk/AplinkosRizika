@@ -73,11 +73,13 @@ function scoreTone(score: number) {
 function PageFrame({
   eyebrow,
   title,
+  titleAccent,
   description,
   children,
 }: {
   eyebrow: string;
   title: string;
+  titleAccent?: string;
   description: string;
   children: ReactNode;
 }) {
@@ -100,7 +102,10 @@ function PageFrame({
       <main className="analytics-main">
         <section className="analytics-hero-panel">
           <span className="analytics-eyebrow">{eyebrow}</span>
-          <h1>{title}</h1>
+          <h1>
+            {title}
+            {titleAccent && <span className="analytics-title-accent">{titleAccent}</span>}
+          </h1>
           <p>{description}</p>
         </section>
         {children}
@@ -132,7 +137,7 @@ function ScoreLine({ label, value }: { label: string; value: number }) {
   );
 }
 
-function LoadingPanel({ label = "Kraunami gyvi duomenys..." }: { label?: string }) {
+function LoadingPanel({ label = "Ruošiame informaciją..." }: { label?: string }) {
   return <div className="glass-panel analytics-state">{label}</div>;
 }
 
@@ -155,12 +160,12 @@ function useLiveElderships() {
       .then((data) => {
         if (cancelled) return;
         setMetrics(data);
-        setError(data.length ? null : "API grąžino tuščią seniūnijų rinkinį.");
+        setError(data.length ? null : "Šiuo metu nepavyko rasti seniūnijų duomenų.");
       })
       .catch((fetchError: unknown) => {
         if (cancelled) return;
         console.error(fetchError);
-        setError("Nepavyko įkelti seniūnijų analitikos iš API.");
+        setError("Nepavyko įkelti seniūnijų palyginimo.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -178,8 +183,9 @@ export function AnalyticsHomePage() {
   return (
     <PageFrame
       eyebrow="Analitikos centras"
-      title="Analitiniai moduliai miesto sprendimams"
-      description="Keturi interaktyvūs moduliai, prijungti prie C# API ir realių miesto duomenų."
+      title="Miesto analizė"
+      titleAccent="vienoje vietoje"
+      description="Čia galite palyginti rajonus, įvertinti būsto aplinką ir greitai suprasti, kuri vieta geriausiai tinka gyvenimui."
     >
       <div className="analytics-module-grid">
         {analyticsModules.map(({ path, title, description, eyebrow, Icon }) => (
@@ -220,8 +226,9 @@ export function EldershipComparisonPage() {
   return (
     <PageFrame
       eyebrow="Seniūnijų palyginimas"
-      title="Teritorijų sveikatos lentelė"
-      description="Gyvai jungia seniūnijų, nusikalstamumo, mokyklų, transporto ir OSM pasiekiamumo duomenis."
+      title="Palyginkite miesto"
+      titleAccent="teritorijas"
+      description="Pasirinkite kelias seniūnijas ir greitai pamatykite, kur daugiau parkų, patogesnis transportas, geresnis pasiekiamumas ir saugesnė aplinka."
     >
       <section className="analytics-grid analytics-grid--sidebar">
         <aside className="glass-panel selector-panel">
@@ -241,14 +248,14 @@ export function EldershipComparisonPage() {
               </label>
             ))}
           </div>
-          <p className="panel-note">Paliekami bent 2 pasirinkimai, kad palyginimas visada turėtų kontekstą.</p>
+          <p className="panel-note">Palikite bent 2 seniūnijas, kad būtų aišku, kuo jos skiriasi.</p>
         </aside>
 
         <section className="glass-panel comparison-panel">
           <div className="panel-heading panel-heading--spread">
             <div>
-              <span className="analytics-eyebrow">Gyvi rodikliai</span>
-              <h2>Palyginimo matrica</h2>
+              <span className="analytics-eyebrow">Pagrindiniai rodikliai</span>
+              <h2>Palyginimas</h2>
             </div>
             <StatChip label="Pasirinkta" value={`${selectedElderships.length}`} />
           </div>
@@ -261,7 +268,7 @@ export function EldershipComparisonPage() {
           {!loading && !error && selectedElderships.length > 0 && (
             <div className="comparison-table">
               <div className="comparison-row comparison-row--header">
-                <span>Seniunija</span>
+                <span>Seniūnija</span>
                 {metricDefinitions.map((metric) => (
                   <span key={metric.key}>{metric.label}</span>
                 ))}
@@ -306,12 +313,12 @@ export function RealEstateAnalyticsPage() {
         if (cancelled) return;
         setListings(data);
         setActiveListingId(data[0]?.id ?? "");
-        setError(data.length ? null : "RealEstate/nearby endpointas grąžino tuščią sąrašą. Paleiskite duomenų rinkiklį arba padidinkite spindulį.");
+        setError(data.length ? null : "Šiuo metu neturime skelbimų šiame spindulyje. Pabandykite vėliau arba pasirinkite kitą vietą.");
       })
       .catch((fetchError: unknown) => {
         if (cancelled) return;
         console.error(fetchError);
-        setError("Nepavyko įkelti NT skelbimų iš API.");
+        setError("Nepavyko įkelti NT skelbimų.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -344,14 +351,15 @@ export function RealEstateAnalyticsPage() {
   return (
     <PageFrame
       eyebrow="NT skelbimų analizė"
-      title="Skelbimai su kaimynystės balu"
-      description="Kiekvienam skelbimui pridedamas OSM, transporto ir nusikalstamumo pagrindu apskaičiuotas kaimynystės balas."
+      title="Būstas su"
+      titleAccent="kaimynystės balu"
+      description="Matykite ne tik kainą ir plotą, bet ir tai, kokia aplinka yra aplink būstą: ar netoli paslaugos, transportas ir žalios erdvės."
     >
       <section className="real-estate-layout">
         <div className="glass-panel property-map" aria-label="NT skelbimų žemėlapis">
           <div className="map-toolbar">
             <Map size={20} />
-            <strong>Kauno NT sluoksnis</strong>
+            <strong>Skelbimų žemėlapis</strong>
             <span>{listings.length} objektai</span>
           </div>
           <div className="mock-map-grid">
@@ -444,8 +452,9 @@ export function RecommendationPage() {
   return (
     <PageFrame
       eyebrow="Išmanioji rekomendacija"
-      title="Rajonų atranka pagal jūsų prioritetus"
-      description="Top 3 skaičiuojamas iš gyvų seniūnijų, nusikalstamumo, transporto, parkų ir paslaugų duomenų."
+      title="Rajonų atranka pagal"
+      titleAccent="jūsų prioritetus"
+      description="Pasirinkite, kas jums svarbiausia, o sistema parodys tris vietas, kurios geriausiai atitinka jūsų gyvenimo būdą."
     >
       <section className="wizard-layout">
         <div className="glass-panel wizard-controls">
@@ -488,7 +497,7 @@ export function RecommendationPage() {
             </div>
           ) : (
             <div className="result-preview">
-              <strong>{ranked[0]?.name ?? "Nėra duomenų"}</strong>
+              <strong>{ranked[0]?.name ?? "Dar nėra rezultato"}</strong>
               <span>{ranked[0]?.matchScore ?? 0}% atitiktis</span>
             </div>
           )}
@@ -506,7 +515,7 @@ export function RecommendationPage() {
         <div className="recommendation-results">
           {loading && <LoadingPanel />}
           {error && !loading && <ErrorPanel message={error} />}
-          {!loading && !error && ranked.length === 0 && <EmptyPanel message="Rekomendacijoms trūksta API duomenų." />}
+          {!loading && !error && ranked.length === 0 && <EmptyPanel message="Rekomendacijoms dar trūksta duomenų." />}
           {!loading && !error && ranked.map((item, index) => (
             <article className="glass-panel recommendation-card" key={item.id}>
               <div className="rank-number">{index + 1}</div>
@@ -520,7 +529,7 @@ export function RecommendationPage() {
                 </div>
                 <p>{item.summary}</p>
                 <div className="property-stats">
-                  <StatChip label="Mediana €/m²" value={item.medianPrice ? formatCurrency(item.medianPrice) : "nėra NT imties"} />
+                  <StatChip label="Tipinė kaina €/m²" value={item.medianPrice ? formatCurrency(item.medianPrice) : "nėra skelbimų"} />
                   <StatChip label="Saugumas" value={`${item.scores.safety}/10`} />
                   <StatChip label="Transportas" value={`${item.scores.transport}/10`} />
                 </div>
@@ -559,7 +568,7 @@ export function DeepEvaluationDashboardPage() {
       .catch((fetchError: unknown) => {
         if (cancelled) return;
         console.error(fetchError);
-        setError("Nepavyko įkelti išsamaus vietos vertinimo.");
+        setError("Nepavyko paruošti šios vietos įvertinimo.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -584,8 +593,9 @@ export function DeepEvaluationDashboardPage() {
   return (
     <PageFrame
       eyebrow="Išsamus vietos įvertinimas"
-      title="Vieno adreso 360° apžvalga"
-      description="Naudoja geokodavimą, OSM pasiekiamumo vertinimą, transportą ir nusikalstamumo duomenis."
+      title="Vieno adreso"
+      titleAccent="360° apžvalga"
+      description="Įveskite adresą ir pamatykite aiškų saugumo, paslaugų, susisiekimo ir artimiausių objektų vaizdą."
     >
       <section className="deep-dashboard">
         <form
@@ -636,7 +646,7 @@ export function DeepEvaluationDashboardPage() {
             <article className="glass-panel deep-card">
               <div className="panel-heading panel-heading--spread">
                 <div>
-                  <span className="analytics-eyebrow">Infrastruktura</span>
+                  <span className="analytics-eyebrow">Infrastruktūra</span>
                   <h2>Artimiausi objektai</h2>
                 </div>
                 <Map size={22} />
@@ -664,7 +674,7 @@ export function DeepEvaluationDashboardPage() {
                 <StatChip label="Vaikščiojamumas" value={`${evaluation.transport.walkScore}/100`} />
                 <StatChip label="Reisai / val." value={`${evaluation.transport.averageTripsPerHour}`} />
                 <StatChip label="Artimiausia stotele" value={evaluation.transport.nearestStop} />
-                <StatChip label="Piko langas" value={evaluation.transport.peakWindow} />
+                <StatChip label="Aktyviausias laikas" value={evaluation.transport.peakWindow} />
               </div>
               <div className="frequency-strip">
                 {[8, 15, 19, 22, 18, 13, 9, 6].map((value, index) => (

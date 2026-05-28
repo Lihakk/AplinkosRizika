@@ -116,6 +116,11 @@
   letter-spacing: 0;
 }
 
+.analytics-title-accent {
+  display: block;
+  color: #176043;
+}
+
 .analytics-hero-panel p {
   max-width: 760px;
   margin: 0;
