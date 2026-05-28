@@ -39,8 +39,28 @@
 }
 
 .top-left {
-  top: 45px;
-  left: 45px;
+  top: 25px;
+  left: 10px;
+  gap: 13px;
+}
+
+.top-left .glass-panel,
+.top-left .glass-btn {
+  transform: scale(0.9);
+  transform-origin: top left;
+}
+
+.top-left .glass-panel {
+  padding: 8px 12px;
+}
+
+.top-left .glass-panel input {
+  width: 170px;
+  font-size: 13px;
+}
+
+.top-left .glass-btn {
+  padding: 6px 10px 6px 8px;
 }
 
 .top-right {
@@ -347,7 +367,9 @@
 .profile-btn { flex: 1; padding: 8px 12px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: 0.2s; }
 .profile-btn:hover { background: #f1f5f9; color: #1e293b; }
 .profile-btn.active { background: #3b82f6; color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
-
+.leaflet-routing-alt table {
+  display: none !important;
+}
 /* Žymekliai ir pop-up'ai */
 .place-address { font-size: 16px; font-weight: 600; color: #0f172a; margin: 4px 0; word-break: break-word; }
 .place-coords { font-size: 13px; color: #64748b; margin: 0; }
