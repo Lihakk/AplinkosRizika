@@ -108,7 +108,7 @@ export default function AnalysisPage() {
         if (freqRes.ok) setStopFrequency((await freqRes.json()) as FrequencyPoint[]);
         if (homesRes.ok) setListings((await homesRes.json()) as RealEstateListing[]);
       } catch (error) {
-        console.error("Klaida kraunant analizę:", error);
+        console.error("Nepavyko įkelti vietos analizės:", error);
       } finally {
         setLoading(false);
       }
@@ -142,7 +142,7 @@ export default function AnalysisPage() {
 
   const tabs = [
     { id: "overview" as const, label: "Apžvalga", Icon: BarChart3 },
-    { id: "osm" as const, label: "OSM paslaugos", Icon: Layers },
+    { id: "osm" as const, label: "Paslaugos", Icon: Layers },
     { id: "transport" as const, label: "Transportas", Icon: Bus },
     { id: "homes" as const, label: "Būstas", Icon: Building2 },
   ];
@@ -152,14 +152,14 @@ export default function AnalysisPage() {
       <header className="analysis-header">
         <button className="back-btn" onClick={() => navigate(-1)}>
           <ArrowLeft size={19} />
-          Grįžti
+          Atgal
         </button>
         <div className="analysis-title">
           <span>Vietos analizė</span>
           <h1>{address}</h1>
         </div>
         <div className={`status-badge ${loading ? "is-loading" : ""}`}>
-          {loading ? "Kraunama" : "Gyvi duomenys"}
+          {loading ? "Ruošiama" : "Paruošta"}
         </div>
       </header>
 
@@ -169,7 +169,7 @@ export default function AnalysisPage() {
             <span className="eyebrow">Bendras vertinimas</span>
             <h2>{qualityOfLifeScore == null ? "Skaičiuojama" : `${qualityOfLifeScore}/100`}</h2>
             <p>
-              Balas jungia vaikščiojamumą, OSM paslaugų pasiekiamumą ir viešojo transporto intensyvumą.
+              Parodo, kaip patogu gyventi šioje vietoje: ar lengva vaikščioti, pasiekti paslaugas ir naudotis viešuoju transportu.
             </p>
           </div>
           <div className={`score-meter score-meter--${scoreTone(qualityOfLifeScore)}`}>
@@ -202,15 +202,15 @@ export default function AnalysisPage() {
               </article> */}
               <article className="metric-card">
                 <Layers size={22} />
-                <span>OSM paslaugos</span>
+                <span>Paslaugos</span>
                 <strong>{accessibilityData ? `${accessibilityData.totalScore}/100` : "—"}</strong>
-                <small>{nearestFeature ? `${nearestFeature.type}: ${formatDistance(nearestFeature.distance)}` : "Vertinama pagal atstumus"}</small>
+                <small>{nearestFeature ? `${nearestFeature.type}: ${formatDistance(nearestFeature.distance)}` : "Ieškome artimiausių vietų"}</small>
               </article>
               <article className="metric-card">
                 <Bus size={22} />
                 <span>Transportas</span>
                 <strong>{transitScore == null ? "—" : `${transitScore}/100`}</strong>
-                <small>{transitAverage ? `${transitAverage.toFixed(1)} reis./val.` : "Stotelės grafikas nerastas"}</small>
+                <small>{transitAverage ? `${transitAverage.toFixed(1)} reis./val.` : "Grafiko dar neturime"}</small>
               </article>
               <article className="metric-card">
                 <Home size={22} />
@@ -225,8 +225,8 @@ export default function AnalysisPage() {
             <div className="analysis-card">
               <div className="section-heading">
                 <div>
-                  <span className="eyebrow">OpenStreetMap</span>
-                  <h3>Kas yra arti</h3>
+                  <span className="eyebrow">Paslaugos aplink</span>
+                  <h3>Kas netoliese</h3>
                 </div>
                 <ShieldCheck size={24} />
               </div>
@@ -242,11 +242,11 @@ export default function AnalysisPage() {
                     <b>{feature.rangeLabel || "atstumas"}</b>
                   </div>
                 ))}
-                {!accessibilityData?.features.length && <p className="empty-copy">OSM paslaugų dar nepavyko įkelti.</p>}
+                {!accessibilityData?.features.length && <p className="empty-copy">Artimiausių paslaugų dar nepavyko rasti.</p>}
               </div>
               {weakestFeature && (
                 <p className="insight-copy">
-                  Silpniausia kategorija pagal atstumą: <strong>{weakestFeature.type}</strong> ({formatDistance(weakestFeature.distance)}).
+                  Tolimiausia kasdienė paslauga: <strong>{weakestFeature.type}</strong> ({formatDistance(weakestFeature.distance)}).
                 </p>
               )}
             </div>
@@ -257,7 +257,7 @@ export default function AnalysisPage() {
               <div className="section-heading">
                 <div>
                   <span className="eyebrow">Viešasis transportas</span>
-                  <h3>Reisai pagal valandą</h3>
+                  <h3>Transporto dažnumas</h3>
                 </div>
                 <strong>{transitAverage ? `${transitAverage.toFixed(1)}/val.` : "—"}</strong>
               </div>
@@ -274,7 +274,7 @@ export default function AnalysisPage() {
                   })}
                 </div>
               ) : (
-                <p className="empty-copy">Šiai vietai transporto intensyvumo duomenų nėra.</p>
+                <p className="empty-copy">Šiai vietai viešojo transporto grafiko dar neturime.</p>
               )}
             </div>
           )}
@@ -300,7 +300,7 @@ export default function AnalysisPage() {
                     <ExternalLink size={16} />
                   </a>
                 ))}
-                {listings.length === 0 && <p className="empty-copy">Netoliese skelbimų nerasta arba duomenų rinkiklis dar neužpildė bazės.</p>}
+                {listings.length === 0 && <p className="empty-copy">Netoliese skelbimų šiuo metu neradome.</p>}
               </div>
             </div>
           )}

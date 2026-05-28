@@ -66,6 +66,8 @@
   margin: 3px 0 0;
   color: #17211d;
   font-size: clamp(18px, 2.4vw, 28px);
+  font-weight: 900;
+  letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -105,16 +107,18 @@
 .analysis-hero h2 {
   margin: 6px 0;
   color: #17211d;
-  font-size: clamp(38px, 8vw, 82px);
-  line-height: 0.95;
+  font-size: clamp(42px, 7vw, 82px);
+  font-weight: 900;
+  line-height: 1;
   letter-spacing: 0;
 }
 
 .analysis-hero p {
-  max-width: 680px;
+  max-width: 880px;
   margin: 0;
   color: #52615c;
   font-size: 16px;
+  font-weight: 600;
   line-height: 1.55;
 }
 
@@ -125,9 +129,10 @@
   min-width: 154px;
   min-height: 118px;
   border: 1px solid #dfe5dc;
-  border-left: 8px solid #87928d;
+  border-left: 8px solid #176043;
   border-radius: 8px;
   background: #f7f9f4;
+  color: #176043;
   padding: 18px 20px;
 }
 
@@ -149,13 +154,13 @@
 }
 
 .score-meter--warn {
-  border-left-color: #d9951a;
-  color: #925807;
+  border-left-color: #2f8f67;
+  color: #176043;
 }
 
 .score-meter--bad {
-  border-left-color: #d24b43;
-  color: #a2312c;
+  border-left-color: #176043;
+  color: #176043;
 }
 
 .analysis-tabs {
@@ -174,8 +179,8 @@
 }
 
 .analysis-tabs button.active {
-  border-color: #17211d;
-  background: #17211d;
+  border-color: #176043;
+  background: #176043;
   color: #ffffff;
 }
 
@@ -228,7 +233,7 @@
 }
 
 .metric-card strong {
-  color: #17211d;
+  color: #176043;
   font-size: 30px;
   line-height: 1;
 }
@@ -286,7 +291,7 @@
 .service-row strong,
 .listing-card strong {
   display: block;
-  color: #17211d;
+  color: #176043;
 }
 
 .service-row small,
@@ -316,6 +321,14 @@
   background: #f4f6f2;
   color: #52615c;
   padding: 13px 14px;
+}
+
+.analysis-page strong {
+  color: #176043;
+}
+
+.analysis-tabs button.active svg {
+  color: #ffffff;
 }
 
 .transport-chart {
