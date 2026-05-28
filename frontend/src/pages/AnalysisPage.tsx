@@ -226,7 +226,7 @@ export default function AnalysisPage() {
               <div className="section-heading">
                 <div>
                   <span className="eyebrow">Paslaugos aplink</span>
-                  <h3>Kas netoliese</h3>
+                  <h3>Artimiausios vietovės</h3>
                 </div>
                 <ShieldCheck size={24} />
               </div>
