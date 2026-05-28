@@ -336,9 +336,9 @@
   align-items: flex-end;
   gap: 8px;
   height: 260px;
-  border: 1px solid #e5e9e0;
+  border: 1px solid #cfe0d8;
   border-radius: 8px;
-  background: #fbfcf8;
+  background: #f7fbf9;
   padding: 18px 14px 30px;
 }
 
@@ -354,7 +354,8 @@
   width: 100%;
   min-height: 6px;
   border-radius: 5px 5px 0 0;
-  background: #1d6f91;
+  background: linear-gradient(180deg, #219467, #176043);
+  box-shadow: 0 8px 18px rgba(23, 96, 67, 0.16);
 }
 
 .transport-bar span {
